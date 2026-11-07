@@ -32,6 +32,7 @@ DEFAULT_ORDER = [
     "11_seed_menu_sbux.sql",
     "12_seed_menu_generic.sql",
     "13_seed_circuit.sql",
+    "15_schema_workflows.sql",
 ]
 
 # 시연 · 검수용. 기본 순서에 넣지 않는다 — 운영 배포에서 돌리지 않기 위해서다

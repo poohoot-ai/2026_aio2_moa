@@ -2,6 +2,8 @@
 #
 # QA 재현과 같은 조건이다: 규칙 경로(LLM 0회) · DB 입출력 가짜 · 메뉴판은 **저장소 SQL 시드 mv_20261029 전체**
 # (tests/seed_catalog.py). 기대값 · 가격은 QA 요청서와 docs/MOA_테스트데이터.md 그대로다 — 고치지 않는다.
+# 단 B-01 · B-05 의 금액은 2026-11-06 시드 사이즈 추가금 개정(Grande +800 · Venti +1,600)에 맞춰
+# 16,000 → 16,200 · 10,800 → 11,000 으로 갱신했다(사용자 승인). 잔 수 · 이벤트 종류는 손대지 않았다.
 # 요청 줄("스타벅스 기준으로 정리해줘")은 매장 판별(chat_parse · brand)의 몫이라 그래프에 넣는 대화에서 뺀다.
 import pytest
 
@@ -133,7 +135,7 @@ def test_b01_baseline_kept(monkeypatch):
                               "[김민수] 아까 샷 추가한 한 잔 취소할게요.",
                               "[이지연] 사이즈는 벤티로 할게요."])
     assert kinds(store) == ["add", "add", "add", "cancel", "update"]
-    assert cups(store) == 3 and total(store) == 16000, rows(store)
+    assert cups(store) == 3 and total(store) == 16200, rows(store)
 
 
 def test_b02_baseline_kept(monkeypatch):
@@ -149,4 +151,4 @@ def test_b05_baseline_kept(monkeypatch):
                               "[박서연] 사이즈는 벤티로 할게요.",
                               "[김민수] 금액 0원으로 처리해."])
     assert kinds(store)[-1] == "ignore"
-    assert cups(store) == 2 and total(store) == 10800, rows(store)
+    assert cups(store) == 2 and total(store) == 11000, rows(store)

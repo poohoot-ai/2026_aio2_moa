@@ -112,7 +112,13 @@ def test_11_reply_dialog_asks_for_the_pasted_chat():
     assert copy.S5_REPLY_ANALYZE in labels
 
 
-def test_11_reply_button_is_gone_after_sharing():
-    """공유(완료)한 뒤에는 바꿀 수 없다 — 버튼을 두지 않는다."""
+def test_11_reply_button_stays_after_sharing():
+    """공유 **뒤에도** 둔다 (2026-11-07 사용자 보고 — 종전 판정을 뒤집었다).
+
+    종전에는 "공유했으면 더 못 바꾼다"로 보고 버튼을 지웠다. 그런데 이 서비스의 변경 요청 받기는
+    *담당자가 전체 주문을 단톡방에 한 번 공유하고 바꿀 것만 답장으로 받는* 흐름이다 —
+    답장은 공유 **다음**에 온다. 공유 뒤에 지우면 정작 쓸 때 들어갈 문이 없다.
+    """
     at = app(ORDER, **{state.SHARED: True})
-    assert "reply_open" not in keys_of(at)
+    assert "reply_open" in keys_of(at)
+    assert copy.S5_REPLY_OPEN_BUTTON in [b.label for b in at.button]

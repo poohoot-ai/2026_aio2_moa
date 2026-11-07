@@ -380,7 +380,7 @@ def test_dev_overrides_open_ports_only_on_localhost():
     core_dev = compose("docker-compose.core.dev.yml")["services"]
     app_dev = compose("docker-compose.app.dev.yml")["services"]
 
-    # D-03 v1.3 결정 ⑬ — db 는 호스트의 run_sql.py · uvicorn 용으로 127.0.0.1 에만 연다
-    assert core_dev["db"]["ports"] == ["127.0.0.1:5433:5432"]
+    # DB는 호스트 개발 도구용으로 127.0.0.1 에만 연다. 5434는 이미 점유된 5433과 충돌하지 않는다.
+    assert core_dev["db"]["ports"] == ["127.0.0.1:5434:5432"]
     for svc in [*core_dev.values(), *app_dev.values()]:
         assert all(p.startswith("127.0.0.1:") for p in svc["ports"])

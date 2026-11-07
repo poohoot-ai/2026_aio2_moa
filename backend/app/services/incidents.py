@@ -8,6 +8,12 @@
 권한으로 막혀 있고, 그것이 PRD 5.7 금지 행동의 DB 쪽 구현이다.
 """
 
+import os
+import time
+
+import httpx
+import psycopg
+
 from app import config, db, ids
 
 # P-03 7절 장애 코드 7종 + PRD v1.9 2종(AGENT_EXCEPTION · PROMPT_INJECTION) → 화면 문구
@@ -37,6 +43,8 @@ SERVICE_LABEL = {
     "order_interpreter_backup": "주문 해석 대체",
     "menu_store": "메뉴 저장소",
     "agent_process": "처리 프로세스",
+    "moa-a-backend-1": "앱 A 처리 프로세스",
+    "moa-b-backend-1": "앱 B 처리 프로세스",
 }
 
 CIRCUIT_STATE_TEXT = {
@@ -47,11 +55,17 @@ CIRCUIT_STATE_TEXT = {
     "probing": "시험 중",
 }
 
+# 도구줄 F-3 의 고정 대상. 시험 층과 달리 대상을 고르지 않는다 — 고르는 축은 시험에만 둔다
+LAB_KILL_TARGET = "moa-a-backend-1"
+
 # F-1 ~ F-6 → 주입 대상과 모드 (D-02 6.1)
 FAULT_TARGETS = {
     "F-1": ("order_interpreter_primary", "error"),
     "F-2": ("order_interpreter_primary", "delay"),
-    "F-3": ("agent_process", "kill"),
+    # F-3 은 실제 컨테이너를 멈춰야 한다. `agent_process` 라는 상징적 이름을 쓰던 동안에는
+    # 행만 남고 아무도 읽지 않아 **버튼이 조용히 아무 일도 하지 않았다**(2026-11-07 확인).
+    # 실행 주체는 healing worker 다(`_lab_kill_watch`) — 업무 backend 에는 Docker 권한이 없다
+    "F-3": (LAB_KILL_TARGET, "kill"),
     "F-4": ("order_interpreter_primary", "error"),
     "F-5": ("order_interpreter_primary", "invalid"),
     "F-6": ("menu_store", "block"),
@@ -64,7 +78,7 @@ def incident_list(limit: int = 50) -> dict:
         "SELECT incident_id, fault_code, status, status_label, detected_at, resolved_at, "
         "       strategy, detection_evidence "
         "  FROM healing.incident "
-        " WHERE is_verification_run = false "
+        " WHERE is_verification_run = false OR run_id IS NOT NULL "
         " ORDER BY detected_at DESC LIMIT %s",
         (limit,), role="healing")
 
@@ -213,9 +227,57 @@ def status_view() -> dict:
         "updated_at_text": _hhmmss(latest) or "-",
         "environment_label": "실습 환경" if config.ENVIRONMENT == "lab" else config.ENVIRONMENT,
         "services": services,
+        "replicas": replica_status(),
+        "active_injection": active_injection(),
         "active_interpreter": active,
         "cache_fallback_active": any(r["cache_fallback_active"] for r in rows),
     }
+
+
+# --- 앱 복제본 상태 (화면 C · SC-12) --------------------------------------------
+# HAProxy stats CSV 의 status 칸. `pxname,svname,...` 다음 17번째다
+_GW_STATUS_COL = 17
+_GW_SERVERS = (("a", "앱 A"), ("b", "앱 B"))
+_GW_TTL_SEC = 5.0
+_gw_cache: dict = {"at": 0.0, "value": None}
+
+
+def replica_status() -> list[dict] | None:
+    """게이트웨이가 보는 앱 A · B 의 상태. 못 읽으면 None — 화면이 `상태 미수집` 으로 둔다.
+
+    **지어내지 않는다.** 줄을 못 찾은 것은 "중단"이 아니라 "모른다"다 (healing 쪽 같은 판단 · R-21).
+    화면은 5초마다 이 응답을 다시 받으므로 결과를 그만큼 캐시하고 1초 안에 안 오면 포기한다 —
+    F-6(저장소 장애) 시험 중에 대시보드가 게이트웨이까지 흔들지 않게 한다.
+    """
+    now = time.monotonic()
+    if _gw_cache["value"] is not None and now - _gw_cache["at"] < _GW_TTL_SEC:
+        return _gw_cache["value"]
+    try:
+        csv = httpx.get(os.getenv("GATEWAY_STATS_URL", "http://gateway:8404/stats;csv"),
+                        timeout=1.0).text
+    except httpx.HTTPError:
+        return None
+    rows = []
+    for letter, name in _GW_SERVERS:
+        state = _gw_state(csv, letter)
+        if state is None:
+            continue
+        up = state.startswith("UP")
+        rows.append({"key": f"app_{letter}", "name": name, "state": "up" if up else "down",
+                     "active": up, "state_text": "사용 중" if up else f"제외됨 ({state})"})
+    value = rows or None
+    _gw_cache.update(at=now, value=value)
+    return value
+
+
+def _gw_state(csv: str, letter: str) -> str | None:
+    prefix = f"chk_{letter},backend,"
+    for line in csv.splitlines():
+        if line.startswith(prefix):
+            cells = line.split(",")
+            if len(cells) > _GW_STATUS_COL:
+                return cells[_GW_STATUS_COL]
+    return None
 
 
 def _ui_state(row: dict) -> str:
@@ -325,6 +387,28 @@ def inject(code: str | None, action: str = "inject") -> dict:
             (injection_id, code, target, mode, config.ENVIRONMENT))
     return {"ok": True, "user_message": f"{code} 주입했어요",
             "injection_id": injection_id, "target": target, "mode": mode}
+
+
+def active_injection() -> dict | None:
+    """지금 **도구줄로** 걸어 둔 장애 1건. 없으면 None.
+
+    화면 T1 이 "유지 중 · 경과 초 · [해제]"를 그리는 근거다. 이 칸이 없으면
+    **해제할 방법이 화면에서 사라진다**(2026-11-07 실측 — 주입은 됐는데 버튼이 안 나왔다).
+    시험 주입(run_id 있음)은 제외한다 — 그쪽은 워크플로가 정리하고 T2 가 보여 준다.
+    """
+    try:
+        row = db.fetch_one(
+            "SELECT fault, target, mode, injected_at, "
+            "       EXTRACT(EPOCH FROM (NOW() - injected_at)) AS elapsed "
+            "  FROM healing.fault_injection "
+            " WHERE run_id IS NULL AND action = 'inject' AND cleared_at IS NULL "
+            " ORDER BY injected_at DESC LIMIT 1", role="healing")
+    except (db.DbUnavailable, psycopg.Error):
+        return None           # 주입 상태를 못 읽었다고 상태 블록을 통째로 비우지 않는다
+    if not row:
+        return None
+    return {"code": row["fault"], "target": row["target"], "mode": row["mode"],
+            "elapsed_sec": int(row["elapsed"] or 0)}
 
 
 def active_injections() -> list[dict]:

@@ -238,7 +238,7 @@ def test_reply_twice_then_apply_and_share_without_names(live):
     hidden = _ok(client.get(f"/api/sessions/{sid}/share", params={"names": "false"}, headers=auth))
     assert "김민수" in named["content"] and named["show_names"] is True
     assert "김민수" not in hidden["content"] and "이지연" not in hidden["content"]
-    assert hidden["show_names"] is False and "x1" in hidden["content"]
+    assert hidden["show_names"] is False and "× 1잔" in hidden["content"]
     image = client.get(f"/api/sessions/{sid}/share", params={"format": "image", "names": "false"}, headers=auth)
     assert image.status_code in (200, 422)                           # 폰트가 없으면 422(IMAGE_UNAVAILABLE)
 

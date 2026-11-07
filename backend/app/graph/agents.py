@@ -69,7 +69,7 @@ def _run(task: str, agent: str, route: str, ctx, items: list[dict], messages: li
                    "agent": {"items": items, "tools": specs, "transcript": history,
                              "remaining": config.MAX_TOOL_ROUNDS - len(done) - 1}}
         calls[0] += 1
-        reply = interpreter_client.interpret(task, messages, context, service=service, trace_id=trace_id,
+        reply = interpreter_client.interpret_resilient(task, messages, context, service=service, trace_id=trace_id,
                                              session_id=ctx.session_id).model_dump()
         if reply["action"] == "call_tool" and reply.get("tool"):
             try:

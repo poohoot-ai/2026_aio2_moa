@@ -16,7 +16,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app import config, db, llm, logging_setup
-from app.services import trace
+from app.services import menu, trace
 
 router = APIRouter()
 
@@ -81,5 +81,26 @@ def health():
         "status": status,
         "checks": checks,
         "version": VERSION,
+        "checked_at": now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z",
+    })
+
+
+@router.get("/ready")
+def readiness():
+    """Gateway readiness: database reachable and active menu catalogs preloaded/checksummed."""
+    db_state = db.health()
+    checks = {"db": db_state["state"] == "connected", "db_text": db_state["text"],
+              "menu_preload": False, "menu_catalogs": 0}
+    if checks["db"]:
+        try:
+            preloaded = menu.preload_active()
+            checks["menu_preload"] = True
+            checks["menu_catalogs"] = preloaded["catalogs"]
+        except Exception as exc:  # Readiness must fail closed; /health remains diagnostic.
+            checks["menu_preload_error"] = type(exc).__name__
+    ready = checks["db"] and checks["menu_preload"]
+    now = datetime.datetime.now(datetime.timezone.utc)
+    return JSONResponse(status_code=200 if ready else 503, content={
+        "status": "ready" if ready else "not_ready", "checks": checks, "version": VERSION,
         "checked_at": now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z",
     })

@@ -62,8 +62,11 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "lab").strip()
 # 기본값은 **실습 환경(lab)에서만** 쓴다(PRD R-17 · v1.9). 그 밖의 환경에서 값이 없으면 로그인을 막는다.
 # 기본값을 쓰는 중이면 기동 때 경고를 남긴다(app/main.py)
 _OPS_PASSWORD_ENV = (os.getenv("OPS_DASHBOARD_PASSWORD") or "").strip()
-OPS_PASSWORD_IS_DEFAULT = not _OPS_PASSWORD_ENV and ENVIRONMENT == "lab"
-OPS_DASHBOARD_PASSWORD = _OPS_PASSWORD_ENV or ("moa-ops" if ENVIRONMENT == "lab" else "")
+# 코드에 대체 기본값을 두지 않는다 — PRD R-17 이 "배포 전 제거하거나 .env 설정을 필수로 한다"로
+# 정해 두었고, 2026-11-07 QA Q-07 이 lab 에서 짧은 고정 문자열로 로그인되는 것을 확인했다.
+# 운영 대시보드는 아이디 없이 비밀번호 하나로 들어가므로 그 문자열이 유일한 문이었다
+OPS_PASSWORD_MISSING = not _OPS_PASSWORD_ENV
+OPS_DASHBOARD_PASSWORD = _OPS_PASSWORD_ENV
 
 # D-07 7.2 연결 규약 — 값이 코드와 PRD 5.6.1 판정에서 같아야 한다
 CONNECT_TIMEOUT_SEC = 2

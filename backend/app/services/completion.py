@@ -67,7 +67,9 @@ def complete(session: dict, method: str) -> dict:
         "SELECT share_count, completed_at FROM app.order_session WHERE session_id = %s",
         (session_id,))
     logging_setup.log("share_completed", session_id=session_id, trace_id=session["trace_id"],
-                      method=stored_method, version=version, share_count=row["share_count"])
+                      method=stored_method, version=version, share_count=row["share_count"],
+                      # 공유를 허용한 바로 그 판정(v_settlement_check) — 내부 검증 자료(SC-5)
+                      settlement=gate.get("integrity"))
 
     return {
         "user_message": "복사했어요" if stored_method == "copy_text" else "저장했어요",

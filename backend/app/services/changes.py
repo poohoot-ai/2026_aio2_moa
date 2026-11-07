@@ -8,11 +8,12 @@ import json
 
 from app import db, ids
 
-# O-6 방법 5종 (P-06) — 화면 문구를 서버가 정한다
+# O-6 방법 6종 (P-06) — 화면 문구를 서버가 정한다 (chat_add 는 4차 보고 1번)
 METHOD_LABEL = {
     "chat_cancel": "대화에서 취소",
     "question_answer": "직접 선택",
     "chat_edit": "채팅으로 수정",
+    "chat_add": "채팅으로 추가",
     "reply_applied": "답장 반영",
     "auto_recovery": "자동 복구",
 }

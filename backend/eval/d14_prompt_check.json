@@ -1,0 +1,360 @@
+{
+  "checked_at": "2026-11-03T14:27:26+09:00",
+  "prompt_version": "v1.0",
+  "self_check": {
+    "(a) 정답을 넣으면 전부 맞음": {
+      "result": {
+        "route": "14/14",
+        "extra": "6/6",
+        "failed": []
+      },
+      "pass": true
+    },
+    "(b) 규칙 해석의 경계 사례 실패를 잡는가": {
+      "result": {
+        "route": "8/14",
+        "extra": "4/6",
+        "failed": [
+          "2:t1 기대 confirm · 얻음 add",
+          "3:t1 기대 update · 얻음 add",
+          "4:t1 기대 add · 얻음 add · 부가 ['person']",
+          "5:t1 기대 ignore · 얻음 add",
+          "6:t1 기대 ignore · 얻음 confirm",
+          "7:t1 기대 cancel · 얻음 cancel · 부가 ['target_unclear']",
+          "8:t2 기대 ignore · 얻음 add",
+          "10:t2 기대 ignore · 얻음 add"
+        ]
+      },
+      "pass": true
+    }
+  },
+  "results": [
+    {
+      "model": "gpt-5.4-mini-2026-03-17",
+      "route": "14/14",
+      "extra": "5/6",
+      "failed": [
+        "7:t1 기대 cancel · 얻음 cancel · 부가 ['target_unclear']"
+      ],
+      "max_sec": 2.05,
+      "avg_sec": 1.57,
+      "rows": [
+        {
+          "case": "1",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {
+            "person": true,
+            "evidence": true
+          }
+        },
+        {
+          "case": "2",
+          "message_id": "t1",
+          "expect": "confirm",
+          "got": [
+            "confirm"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "3",
+          "message_id": "t1",
+          "expect": "update",
+          "got": [
+            "update"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "4",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {
+            "person": true
+          }
+        },
+        {
+          "case": "5",
+          "message_id": "t1",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "6",
+          "message_id": "t1",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "7",
+          "message_id": "t1",
+          "expect": "cancel",
+          "got": [
+            "cancel"
+          ],
+          "route_ok": true,
+          "checks": {
+            "target_unclear": false
+          }
+        },
+        {
+          "case": "8",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "8",
+          "message_id": "t2",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "9",
+          "message_id": "t1",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "9",
+          "message_id": "t2",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "9",
+          "message_id": "t3",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {
+            "person": true,
+            "evidence": true
+          }
+        },
+        {
+          "case": "10",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "10",
+          "message_id": "t2",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        }
+      ]
+    },
+    {
+      "model": "gpt-4o-mini-2024-07-18",
+      "route": "11/14",
+      "extra": "5/6",
+      "failed": [
+        "7:t1 기대 cancel · 얻음 cancel · 부가 ['target_unclear']",
+        "8:t1 기대 add · 얻음 ignore",
+        "9:t1 기대 ignore · 얻음 (없음)",
+        "9:t2 기대 ignore · 얻음 (없음)"
+      ],
+      "max_sec": 1.94,
+      "avg_sec": 1.6,
+      "rows": [
+        {
+          "case": "1",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {
+            "person": true,
+            "evidence": true
+          }
+        },
+        {
+          "case": "2",
+          "message_id": "t1",
+          "expect": "confirm",
+          "got": [
+            "confirm"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "3",
+          "message_id": "t1",
+          "expect": "update",
+          "got": [
+            "update"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "4",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {
+            "person": true
+          }
+        },
+        {
+          "case": "5",
+          "message_id": "t1",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "6",
+          "message_id": "t1",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "7",
+          "message_id": "t1",
+          "expect": "cancel",
+          "got": [
+            "cancel"
+          ],
+          "route_ok": true,
+          "checks": {
+            "target_unclear": false
+          }
+        },
+        {
+          "case": "8",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": false,
+          "checks": {}
+        },
+        {
+          "case": "8",
+          "message_id": "t2",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "9",
+          "message_id": "t1",
+          "expect": "ignore",
+          "got": [
+            "(없음)"
+          ],
+          "route_ok": false,
+          "checks": {}
+        },
+        {
+          "case": "9",
+          "message_id": "t2",
+          "expect": "ignore",
+          "got": [
+            "(없음)"
+          ],
+          "route_ok": false,
+          "checks": {}
+        },
+        {
+          "case": "9",
+          "message_id": "t3",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {
+            "person": true,
+            "evidence": true
+          }
+        },
+        {
+          "case": "10",
+          "message_id": "t1",
+          "expect": "add",
+          "got": [
+            "add"
+          ],
+          "route_ok": true,
+          "checks": {}
+        },
+        {
+          "case": "10",
+          "message_id": "t2",
+          "expect": "ignore",
+          "got": [
+            "ignore"
+          ],
+          "route_ok": true,
+          "checks": {}
+        }
+      ]
+    }
+  ]
+}

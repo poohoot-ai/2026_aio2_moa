@@ -27,7 +27,10 @@ def groups(session_id: str, session: dict) -> list[dict]:
         "  FROM app.v_order_group g "
         "  LEFT JOIN app.menu m ON m.menu_id = g.menu_id "
         " WHERE g.session_id = %s "
-        " ORDER BY g.quantity DESC, m.name NULLS LAST",
+        # 동점(같은 메뉴 이름 · 같은 잔 수)에서 순서가 흔들리지 않게 항목 번호로 마지막 비김을 푼다.
+        # `group_id` 는 이 순서의 일련번호이고 화면의 이름 칩 편집이 (group_id, 순번)으로 사람을
+        # 가리킨다 — 순서가 뒤집히면 **다른 사람 주문을 고치게 된다** (2026-11-06)
+        " ORDER BY g.quantity DESC, m.name NULLS LAST, g.item_ids[1]",
         (session_id,),
     )
     out = []
@@ -92,7 +95,7 @@ def view(session: dict) -> dict:
     gate = can_share(session_id)
 
     cups = sum(g["quantity"] for g in group_rows)
-    people = len({p for g in group_rows for p in g["people"]})
+    people = settlement.count_people(p for g in group_rows for p in g["people"])
     has_undecided = any(g["estimated_amount"] is None for g in group_rows)
     total = None if has_undecided else sum(g["estimated_amount"] for g in group_rows)
 

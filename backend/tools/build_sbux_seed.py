@@ -2,18 +2,29 @@
 
     python tools/build_sbux_seed.py ../../스타벅스_메뉴별_옵션정리.xlsx      (backend/ 에서 실행)
 
-규칙 (2026-11-04)
-  - 가격이 있는 메뉴만 넣는다. 기본 사이즈의 가격이 base_price, 다른 사이즈는 그 차액이 size 옵션의
-    extra_price 다(Short 는 음수). 메뉴 찾기 화면이 base_price 를 보여 주므로 기본 주문 금액과 같아야 한다.
-    가격이 비어 있는 사이즈는 그 메뉴에 없다.
+규칙 (2026-11-06 개정 — 엑셀이 유일한 출처)
+  - 엑셀에서 가격이 있는 메뉴만 넣는다. 엑셀에 없거나 가격이 없는 메뉴는 넣지 않는다(가안 가격 · 수기 메뉴 없음).
+  - 기존 스타벅스 시드는 지우고 다시 넣는다. 별칭 · 옵션은 전부 지운 뒤 다시 넣고, 메뉴는 엑셀에 없는 것을
+    지운다. 단 주문 이력(order_item, FK ON DELETE RESTRICT)이 참조하는 메뉴는 지울 수 없으므로 비활성으로 돌린다.
+  - 사이즈 가격 (2026-11-06 사용자 결정): Tall 가격이 있으면 Tall 기준으로 만든다 —
+        Short = Tall - 800 · Grande = Tall + 800 · Venti = Tall + 1,600
+    어느 사이즈가 있는지는 '사이즈' 열을 따른다('Short는 HOT만' 이면 아이스 메뉴에 Short 없음).
+    Tall 가격이 없으면(그란데 단일 등) 엑셀 가격을 그대로 쓴다.
+  - base_price 는 기본 사이즈 가격, 다른 사이즈는 그 차액이 size 옵션 extra_price 다(Short 는 음수).
+  - 가격 출처 순서: 'Tall 가격(원)' 열(D열 — 입력값) → '단일 상품 가격(원)' → 사이즈별 가격 열 → '가격·메모' 글자.
+    열은 머리글 이름으로 찾는다. 빈칸 · '#REF!' 는 가격 없음이다.
+    '사이즈' 열에 Short/Tall/Grande/Venti 가 없으면(Solo·Doppio · 선택 없음 · 단일 용량) 사이즈 옵션 없이 한 가격이다.
+    메뉴로 넣는 기준은 'Tall 가격(원)' 또는 '단일 상품 가격(원)' 값이 있는 행이다 — 메모에만 가격이 있는
+    행(제주 그란데 전용 5종)은 넣지 않는다(2026-11-06 사용자 결정). 엑셀 값 보정은 OVERRIDES 에 둔다.
   - 옵션은 5종만 DB 로 관리한다: size · ice · shot · bean · cup. 그 밖의 요청은 기타 요청이다.
-  - 기존 메뉴 ID(sb_001 ~ sb_027)는 유지한다(LEGACY). 평가셋 · 테스트가 이 ID 를 쓴다.
-    새 메뉴 ID 는 sb_c{상품코드} 다 — 엑셀을 다시 돌려도 같은 ID 가 나온다.
-  - 같은 이름이 두 행이면(기본 사이즈만 다른 변형) 기본 사이즈가 Tall 인 행을 쓴다.
-  - 별칭은 sql/seed_src/sbux_alias.csv 에서 읽는다.
+  - 메뉴 ID: 기존 ID(sb_0NN)가 있는 상품코드는 그 ID 를 유지한다(LEGACY — 평가셋 · 별칭이 쓴다).
+    새 메뉴는 sb_c{상품코드}, 상품코드가 없으면 sb_n{이름 해시}. 다시 돌려도 같은 ID 가 나온다.
+  - 같은 이름이 두 행이면(기본 사이즈만 다른 변형) 기존 ID 행 > 기본 사이즈가 Tall 인 행을 쓴다.
+  - 별칭은 sql/seed_src/sbux_alias.csv 에서 읽는다. 시드에 없는 메뉴를 가리키는 별칭은 빼고 경고한다.
 """
 
 import csv
+import hashlib
 import pathlib
 import re
 import sys
@@ -27,9 +38,13 @@ MENU_VERSION = "mv_20261029"          # app/config.py MENU_VERSION 과 같은 �
 
 SIZES = [("short", "Short", "숏"), ("tall", "Tall", "톨"), ("grande", "Grande", "그란데"),
          ("venti", "Venti", "벤티")]
+# Tall 기준 사이즈 차액 (2026-11-06 사용자 결정)
+SIZE_DELTA = {"short": -800, "tall": 0, "grande": 800, "venti": 1600}
 SHOT_EXTRA, DECAF_EXTRA, CUP_DISCOUNT = 600, 300, -400       # 엑셀 가격·메모 열의 값
 
-# 기존 ID → 엑셀 상품코드. name 이 있으면 그 이름을 쓴다(사용자가 부르는 이름 · 온도 짝 유지)
+# 기존 ID → 엑셀 상품코드. name 이 있으면 그 이름을 쓴다(사용자가 부르는 이름 · 온도 짝 유지).
+# 엑셀에서 가격이 없는 메뉴(sb_017 · sb_018 · sb_024 · sb_027)는 시드에 들어가지 않지만,
+# 나중에 엑셀에 가격이 채워지면 같은 ID 로 돌아오도록 대응은 남겨 둔다.
 LEGACY = {
     "sb_004": {"code": "110563", "name": "아이스 아메리카노"},   # 엑셀 '아이스 카페 아메리카노'
     "sb_011": {"code": "94"}, "sb_003": {"code": "110569"}, "sb_012": {"code": "41"},
@@ -43,28 +58,23 @@ LEGACY = {
     "sb_026": {"code": "9200000002496"},                          # 그린 티 라떼 → 제주 말차 라떼
     "sb_027": {"code": "18"},
 }
-# 엑셀에 가격이 없는 기존 메뉴 — 이전 시드 가격을 가안으로 유지한다(사이즈 추가금도 이전 가안 +600 · +1,000)
-LEGACY_FALLBACK = {"sb_017": 5900, "sb_018": 4000, "sb_024": 5800, "sb_027": 3800}
-# 엑셀에 없는 기존 메뉴
-#   sb_001 민트 초콜릿 칩 블렌디드 — PRD 8 기준 입력(참조 주문)의 정답 메뉴라 비활성하지 않는다(가격 가안)
-#   sb_022 아이스 자스민 그린 티 — 비활성
-NOT_IN_SHEET = {
-    "sb_001": {"name": "민트 초콜릿 칩 블렌디드", "category": "블렌디드", "price": 5700,
-               "groups": ["size", "ice", "cup"], "active": True},
-    "sb_022": {"name": "아이스 자스민 그린 티", "category": "티", "price": 4500,
-               "groups": [], "active": False},
+# 엑셀 값을 바로잡는 보정(상품코드 → 덮어쓸 값). 엑셀이 고쳐지면 이 항목을 지운다 — 같아지면 경고가 뜬다.
+#   169001 망고 바나나 블렌디드 — 벤티 단일 6,600원 (2026-11-06 사용자 확인). 엑셀은 Grande · Tall 칸 6,600
+#          → Tall 기준 규칙(Venti = Tall + 1,600)에 맞춰 Tall 5,000 으로 넣는다
+OVERRIDES = {
+    "169001": {"size_text": "Venti(591ml)", "tall": 6600 - SIZE_DELTA["venti"]},
 }
 # 이름이 같은 변형 중 버리는 행(상품코드) — 가격이 같고 기본 사이즈만 다르다
 SKIP_CODES = {"9200000004770", "9200000004753", "9200000005310", "9200000004769",
               "9200000005516"}   # 마지막: 리저브 '아이스 아메리카노' — sb_004 와 이름 · 가격이 같다
 
-# 기존 23종의 특성 태그는 그대로 둔다
+# 기존 메뉴의 특성 태그는 그대로 둔다
 LEGACY_TAGS = {
     "sb_004": [], "sb_011": ["따뜻한"], "sb_003": ["고소한"], "sb_012": ["고소한", "따뜻한"],
     "sb_006": ["단맛"], "sb_013": ["단맛", "따뜻한"], "sb_014": ["단맛"], "sb_015": ["단맛"],
-    "sb_016": [], "sb_017": ["단맛"], "sb_018": [], "sb_001": ["단맛", "초콜릿", "카페인없음"],
+    "sb_016": [], "sb_017": ["단맛"], "sb_018": [],
     "sb_002": ["단맛", "초콜릿"], "sb_019": ["단맛"], "sb_020": ["단맛", "초콜릿", "카페인없음"],
-    "sb_021": ["단맛", "과일", "카페인없음"], "sb_005": ["티", "과일", "카페인없음"], "sb_022": ["티"],
+    "sb_021": ["단맛", "과일", "카페인없음"], "sb_005": ["티", "과일", "카페인없음"],
     "sb_023": ["티"], "sb_024": ["티", "단맛"], "sb_025": ["단맛", "초콜릿", "카페인없음"],
     "sb_026": ["티", "단맛"], "sb_027": ["카페인없음"],
 }
@@ -96,30 +106,114 @@ def default_size(size_text: str, available: list[str]) -> str:
     for value, word, _ in SIZES:
         if value in available and re.search(rf"{word}\([^)]*기본\)", size_text or ""):
             return value
-    return available[0]
+    return "tall" if "tall" in available else available[0]
+
+
+def _won(value) -> int | None:
+    """가격 셀 값 → 정수. 빈칸 · '#REF!' 같은 수식 오류 · 문자열은 가격 없음(None)이다."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    text = str(value or "").replace(",", "").replace("원", "").strip()
+    return int(text) if text.isdigit() else None
+
+
+_MEMO_SIZE = re.compile(r"\b(Short|Tall|Grande|Venti)\s+(\d{1,2},\d{3}|\d{4,5})원")
+_MEMO_SINGLE = re.compile(r"(?:사진 가격|단일 가격|가격)\s+(\d{1,2},\d{3}|\d{4,5})원")
+
+
+def memo_prices(memo: str) -> tuple[dict[str, int], int | None]:
+    """'가격·메모' 열의 글자에서 가격을 읽는다.
+
+    'Tall 5,200원 / Grande 5,800원' → 사이즈별 가격.  '사진 가격 4,700원' → 단일 상품 가격.
+    '메뉴 가격 미확인' · 'Short = Tall - 800원' 같은 계산식 메모는 가격으로 보지 않는다.
+    """
+    words = {w: v for v, w, _ in SIZES}
+    sizes = {words[w]: int(p.replace(",", "")) for w, p in _MEMO_SIZE.findall(memo)}
+    single = None
+    if not sizes:
+        m = _MEMO_SINGLE.search(memo)
+        single = int(m.group(1).replace(",", "")) if m else None
+    return sizes, single
+
+
+def offered_sizes(name: str, size_text: str) -> list[str]:
+    """'사이즈' 열에 적힌 사이즈. 'Short는 HOT만' 이면 아이스 메뉴에서 Short 를 뺀다."""
+    found = [v for v, word, _ in SIZES if re.search(rf"\b{word}\b", size_text or "")]
+    if "short" in found and "HOT만" in (size_text or "") and "아이스" in name:
+        found.remove("short")
+    return found
+
+
+def tall_based(tall: int, sizes: list[str]) -> dict[str, int]:
+    """Tall 가격 기준으로 '사이즈' 열에 있는 사이즈 가격만 만든다 (Short -800 · Grande +800 · Venti +1,600).
+
+    Tall 이 없는 메뉴(코르타도 = Short 전용 · 망고 바나나 블렌디드 = Grande 전용)도 Tall 가격 기준으로 계산한다.
+    """
+    return {v: tall + SIZE_DELTA[v] for v, _, _ in SIZES if v in sizes}
+
+
+# 엑셀 열은 번호가 아니라 머리글로 찾는다 (2026-11-06 12:17 판에서 D열 'Tall 가격(원)' 이 끼어들어 열이 밀렸다)
+COLS = {"category": "카테고리", "code": "상품코드", "name": "메뉴명", "size_text": "사이즈",
+        "bean_shot": "원두·샷", "ice_cup": "얼음·컵·기타", "memo": "가격·메모",
+        "single": "단일 상품 가격(원)"}
+
+
+def _header_index(header: list) -> tuple[dict[str, int], list[int], dict[str, int]]:
+    names = [str(h or "").strip() for h in header]
+    missing = [h for h in COLS.values() if h not in names]
+    if missing:
+        raise SystemExit(f"[중단] 엑셀 머리글이 없다: {missing}")
+    idx = {k: names.index(h) for k, h in COLS.items()}
+    tall_cols = [i for i, h in enumerate(names) if h == "Tall 가격(원)"]      # 첫 열(D)이 입력, 뒤 열은 수식
+    size_cols = {v: names.index(f"{w} 가격(원)") for v, w, _ in SIZES if f"{w} 가격(원)" in names}
+    return idx, tall_cols, size_cols
 
 
 def read_sheet(path: str) -> dict[str, dict]:
     ws = openpyxl.load_workbook(path, data_only=True).active
+    idx, tall_cols, size_cols = _header_index([c.value for c in ws[1]])
     rows = {}
     for r in ws.iter_rows(min_row=2, values_only=True):
-        if not r[2]:
+        cell = {k: r[i] if i < len(r) else None for k, i in idx.items()}
+        if not cell["name"]:
             continue
-        code = str(r[1]).strip()
-        prices = {value: r[11 + i] for i, (value, _, _) in enumerate(SIZES)}
-        rows[code] = {
-            "category": r[0], "code": code, "name": r[2].strip(), "size_text": r[3] or "",
-            "bean_shot": r[4] or "", "ice_cup": r[8] or "",
-            "prices": {k: int(v) for k, v in prices.items() if v not in (None, "")},
+        name = str(cell["name"]).strip()
+        code = str(cell["code"]).strip() if cell["code"] not in (None, "") else ""
+        # 가격 출처 순서: Tall 가격 열 → 단일 상품 가격 열 → 사이즈별 가격 열 → '가격·메모' 글자
+        tall = next((v for v in (_won(r[i]) for i in tall_cols if i < len(r)) if v is not None), None)
+        single = _won(cell["single"])
+        prices = {}
+        if tall is None and single is None:
+            prices = {v: _won(r[i]) for v, i in size_cols.items() if i < len(r)}
+            prices = {k: v for k, v in prices.items() if v is not None}
+            if not prices:
+                prices, single = memo_prices(str(cell["memo"] or ""))
+            tall = prices.get("tall")
+        key = code or "name:" + name          # 상품코드가 없는 행(에비앙 등)은 이름으로 구분한다
+        rows[key] = {
+            "category": cell["category"], "code": code, "name": name,
+            "size_text": str(cell["size_text"] or ""), "bean_shot": str(cell["bean_shot"] or ""),
+            "ice_cup": str(cell["ice_cup"] or ""), "tall": tall, "prices": prices, "single": single,
         }
     return rows
 
 
-def groups_for(row: dict) -> list[str]:
+def new_menu_id(row: dict) -> str:
+    """새 메뉴 ID — 상품코드가 있으면 sb_c{상품코드}, 없으면 이름 해시 sb_n{10자}. 다시 돌려도 같은 ID 다."""
+    if row["code"]:
+        return f"sb_c{row['code']}"
+    return "sb_n" + hashlib.md5(row["name"].encode("utf-8")).hexdigest()[:10]
+
+
+def groups_for(row: dict, prices: dict[str, int] | None = None) -> list[str]:
+    prices = row["prices"] if prices is None else prices
     groups = []
-    if row["prices"] and row["size_text"].strip() != "선택 없음":
+    if prices and row["size_text"].strip() != "선택 없음":
         groups.append("size")
-    if "얼음" in row["ice_cup"]:
+    # '얼음: 없이·적게·…' 형식만 얼음 옵션이다. 병음료의 '컵: 매장컵+얼음' 은 얼음 양 선택이 아니다
+    if re.search(r"얼음\s*:", row["ice_cup"]):
         groups.append("ice")
     if "샷" in row["bean_shot"]:
         groups.append("shot")
@@ -134,46 +228,58 @@ def build(path: str) -> tuple[list[dict], list[dict]]:
     sheet = read_sheet(path)
     legacy_codes = {v["code"]: mid for mid, v in LEGACY.items()}
     menus, skipped = [], []
-    for code, row in sheet.items():
+    for row in sheet.values():
+        code = row["code"]
         menu_id = legacy_codes.get(code)
-        if code in SKIP_CODES and not menu_id:
+        if code and code in SKIP_CODES and not menu_id:
             skipped.append({**row, "why": "같은 이름 변형"})
             continue
-        prices = dict(row["prices"])
-        fallback = False
-        if not prices and menu_id in LEGACY_FALLBACK:
-            base = LEGACY_FALLBACK[menu_id]
-            sizes = [v for v, w, _ in SIZES if w in row["size_text"] and v != "short"]
-            prices = ({"tall": base, "grande": base + 600, "venti": base + 1000} if sizes else {"tall": base})
-            prices = {k: v for k, v in prices.items() if not sizes or k in sizes}
-            fallback = True
-        if not prices:
+        if code in OVERRIDES:
+            fix = OVERRIDES[code]
+            if all(row.get(k) == v for k, v in fix.items()):
+                print(f"[알림] 엑셀이 보정값과 같아졌다 — OVERRIDES['{code}'] 를 지운다")
+            row = {**row, **fix}
+        # 가격은 'Tall 가격(원)' · '단일 상품 가격(원)' 열에 있는 것만 인정한다 (2026-11-06 사용자 결정 —
+        # 메모에만 가격이 있는 제주 그란데 전용 5종은 넣지 않는다)
+        if row["tall"] is None and row["single"] is None:
             skipped.append({**row, "why": "가격 없음"})
             continue
-        menu_id = menu_id or f"sb_c{code}"
+        menu_id = menu_id or new_menu_id(row)
         name = LEGACY.get(menu_id, {}).get("name") or row["name"]
-        available = [v for v, _, _ in SIZES if v in prices]
-        chosen = default_size(row["size_text"], available)
-        groups = groups_for(row)
-        if fallback and len(prices) > 1 and "size" not in groups:
-            groups.insert(0, "size")
+        prices, single = dict(row["prices"]), row["single"]
+        if row["tall"] is not None:
+            sizes = offered_sizes(name, row["size_text"])
+            if sizes:
+                prices = tall_based(row["tall"], sizes)
+            else:                               # Solo/Doppio · 선택 없음 · 단일 용량 — 사이즈 옵션 없이 한 가격
+                prices, single = {}, row["tall"]
+        if prices:
+            available = [v for v, _, _ in SIZES if v in prices]
+            chosen = default_size(row["size_text"], available)
+            base = prices[chosen]
+        else:                                   # 단일 상품(병음료 · 생수) — 사이즈 옵션이 없다
+            available, chosen, base = [], "", single
         menus.append({
             "menu_id": menu_id, "code": code, "name": name, "category": row["category"],
-            "prices": prices, "base": prices[chosen], "sizes": available,
-            "default_size": chosen, "groups": groups,
+            "prices": prices, "base": base, "sizes": available,
+            "default_size": chosen, "groups": groups_for(row, prices),
             "tags": LEGACY_TAGS.get(menu_id, tags_for(name, row["category"])),
-            "active": True, "note": "가격 가안(엑셀 미기재 · 이전 시드값)" if fallback else "",
+            "_legacy": code in legacy_codes, "_tall_default": chosen in ("tall", ""),
         })
-    for menu_id, spec in NOT_IN_SHEET.items():
-        base = spec["price"]
-        prices = {"tall": base, "grande": base + 600, "venti": base + 1000} if "size" in spec["groups"] else {}
-        menus.append({
-            "menu_id": menu_id, "code": "", "name": spec["name"], "category": spec["category"],
-            "prices": prices or {"tall": base}, "base": base, "sizes": list(prices),
-            "default_size": "tall", "groups": spec["groups"], "tags": LEGACY_TAGS[menu_id],
-            "active": spec["active"],
-            "note": "엑셀에 없음 · 가격 가안" if spec["active"] else "엑셀에 없음 · 비활성",
-        })
+    # 이름이 같은 행이 둘 이상이면 하나만 남긴다 — 기존 ID > 기본 사이즈 Tall > 엑셀 앞 행
+    by_name: dict[str, dict] = {}
+    for m in menus:
+        keep = by_name.get(m["name"])
+        if keep is None:
+            by_name[m["name"]] = m
+            continue
+        loser = m
+        if (m["_legacy"], m["_tall_default"]) > (keep["_legacy"], keep["_tall_default"]):
+            by_name[m["name"]], loser = m, keep
+        skipped.append({"name": loser["name"], "code": loser["code"], "why": "같은 이름 변형"})
+    menus = [m for m in menus if by_name.get(m["name"]) is m]
+    for m in menus:
+        m.pop("_legacy"), m.pop("_tall_default")
     return menus, skipped
 
 
@@ -208,12 +314,15 @@ def q(text: str) -> str:
     return "'" + str(text).replace("'", "''") + "'"
 
 
-def render(menus: list[dict], source: str) -> str:
+def load_aliases(known: set[str]) -> tuple[list[dict], list[dict]]:
     aliases = list(csv.DictReader(ALIAS_CSV.open(encoding="utf-8")))
-    known = {m["menu_id"] for m in menus}
-    missing = [a for a in aliases if a["menu_id"] not in known]
-    if missing:
-        raise SystemExit(f"[중단] 별칭이 없는 메뉴를 가리킨다: {missing}")
+    return ([a for a in aliases if a["menu_id"] in known],
+            [a for a in aliases if a["menu_id"] not in known])
+
+
+def render(menus: list[dict], source: str) -> str:
+    aliases, dropped = load_aliases({m["menu_id"] for m in menus})
+    id_list = ", ".join(q(m["menu_id"]) for m in menus)
 
     out = [
         "-- =====================================================================",
@@ -221,52 +330,69 @@ def render(menus: list[dict], source: str) -> str:
         "--",
         "-- ★ 생성 파일이다. 손으로 고치지 말고 생성기를 다시 돌린다:",
         "--     python tools/build_sbux_seed.py <스타벅스_메뉴별_옵션정리.xlsx>",
-        f"--   출처: {source} (메뉴 · 사이즈별 가격 · 옵션) · 별칭: sql/seed_src/sbux_alias.csv",
+        f"--   출처: {source} (유일한 출처 — 가격이 있는 메뉴만) · 별칭: sql/seed_src/sbux_alias.csv",
         "--   공개 메뉴 기준 시연 데이터 · 로고 미사용 (PRD 2.4 · R-13)",
         "--",
-        "--   가격: 기본 사이즈 가격이 base_price, 다른 사이즈는 차액이 size 옵션 추가금이다(Short 는 음수).",
+        "--   기존 스타벅스 시드를 지우고 다시 넣는다. 주문 이력이 참조하는 메뉴는 지울 수 없어 비활성으로 돌린다.",
+        "--   사이즈 가격: Tall 기준 Short -800 · Grande +800 · Venti +1,600 (사이즈 열에 있는 것만).",
+        "--   base_price 는 기본 사이즈 가격, 다른 사이즈는 차액이 size 옵션 추가금이다(Short 는 음수).",
         f"--   옵션 5종만 DB 로 관리한다 — size · ice · shot(+{SHOT_EXTRA}) · bean(디카페인 +{DECAF_EXTRA}) ·",
         f"--   cup(개인컵 {CUP_DISCOUNT}). 시럽 · 우유 · 휘핑 등 그 밖의 요청은 기타 요청(custom_request)이다.",
-        "--   가격이 없는 엑셀 행은 넣지 않는다(생성기 출력의 '제외' 목록).",
         f"--   기준 menu_version = '{MENU_VERSION}' (app/config.py MENU_VERSION 과 같은 값)",
         "-- =====================================================================",
         "",
+        "-- --------------------------------------------------------------------",
+        "-- 0. 기존 스타벅스 시드 정리",
+        "--    별칭 · 옵션은 전부 지운다. 메뉴는 이번 시드에 없는 것만 지운다(있는 것은 아래 INSERT 가 덮어쓴다).",
+        "--    order_item.menu_id 는 ON DELETE RESTRICT — 주문 이력이 참조하는 메뉴는 지우지 않고 비활성으로 둔다.",
+        "-- --------------------------------------------------------------------",
+        "DELETE FROM app.menu_alias WHERE brand_id = 'starbucks';",
+        "DELETE FROM app.menu_option WHERE brand_id = 'starbucks'",
+        "   OR menu_id IN (SELECT menu_id FROM app.menu WHERE brand_id = 'starbucks');",
+        "DELETE FROM app.menu m",
+        f" WHERE m.brand_id = 'starbucks' AND m.menu_id NOT IN ({id_list})",
+        "   AND NOT EXISTS (SELECT 1 FROM app.order_item oi WHERE oi.menu_id = m.menu_id);",
+        "UPDATE app.menu SET is_active = false",
+        f" WHERE brand_id = 'starbucks' AND menu_id NOT IN ({id_list});",
+        "",
+        "-- --------------------------------------------------------------------",
+        "-- 1. 메뉴",
+        "-- --------------------------------------------------------------------",
         "INSERT INTO app.menu (menu_id, brand_id, menu_version, category, name, base_price, trait_tags, is_active) VALUES",
     ]
     values = []
     for m in menus:
         tags = "{" + ",".join(f'"{t}"' for t in m["tags"]) + "}"
-        note = f"  -- {m['note']}" if m["note"] else ""
         values.append(f"  ({q(m['menu_id'])}, 'starbucks', {q(MENU_VERSION)}, {q(m['category'])}, "
-                      f"{q(m['name'])}, {m['base']}, {q(tags)}, {'true' if m['active'] else 'false'}){{sep}}{note}")
-    out += [v.replace("{sep}", "," if i < len(values) - 1 else "") for i, v in enumerate(values)]
+                      f"{q(m['name'])}, {m['base']}, {q(tags)}, true)")
+    out.append(",\n".join(values))
     out += [
         "ON CONFLICT (menu_id) DO UPDATE",
         "   SET menu_version = EXCLUDED.menu_version, category = EXCLUDED.category, name = EXCLUDED.name,",
         "       base_price = EXCLUDED.base_price, trait_tags = EXCLUDED.trait_tags, is_active = EXCLUDED.is_active;",
         "",
         "-- --------------------------------------------------------------------",
-        "-- 별칭 — 정규화 키로 저장한다 (소문자 · 공백 제거 · D-07 4.11). 메뉴 이름 자체는 적지 않는다",
-        "-- --------------------------------------------------------------------",
-        "DELETE FROM app.menu_alias WHERE brand_id = 'starbucks';",
-        "INSERT INTO app.menu_alias (alias, menu_id, brand_id) VALUES",
+        "-- 2. 별칭 — 정규화 키로 저장한다 (소문자 · 공백 제거 · D-07 4.11). 메뉴 이름 자체는 적지 않는다",
     ]
-    out += [f"  ({q(a['alias'])}, {q(a['menu_id'])}, 'starbucks')" + ("," if i < len(aliases) - 1 else "")
-            for i, a in enumerate(aliases)]
+    if dropped:
+        out.append("--    시드에 없는 메뉴를 가리켜 뺀 별칭: "
+                   + ", ".join(f"{a['alias']}({a['menu_id']})" for a in dropped))
     out += [
+        "-- --------------------------------------------------------------------",
+        "INSERT INTO app.menu_alias (alias, menu_id, brand_id) VALUES",
+        ",\n".join(f"  ({q(a['alias'])}, {q(a['menu_id'])}, 'starbucks')" for a in aliases),
         "ON CONFLICT (alias, menu_id) DO NOTHING;",
         "",
         "-- --------------------------------------------------------------------",
-        "-- 옵션 — 메뉴마다 따로 적는다. 매장 공통 행을 두지 않는다 — 공통 행은 그 종류를 모든 메뉴에 붙인다.",
+        "-- 3. 옵션 — 메뉴마다 따로 적는다. 매장 공통 행을 두지 않는다 — 공통 행은 그 종류를 모든 메뉴에 붙인다.",
         "-- 메뉴가 아직 안 정해진 항목은 매장 전체 값의 합집합으로 검증한다(menu.applicable_options)",
         "-- --------------------------------------------------------------------",
-        "DELETE FROM app.menu_option WHERE brand_id = 'starbucks';",
         "INSERT INTO app.menu_option (option_id, menu_id, category, brand_id, option_group, option_value, value_label, extra_price, is_default) VALUES",
     ]
-    rows = [r for m in menus if m["active"] for r in option_rows(m)]
-    out += [f"  ({q(oid)}, {q(mid)}, NULL, 'starbucks', {q(g)}, {q(v)}, {q(label)}, {price}, "
-            f"{'true' if default else 'false'})" + ("," if i < len(rows) - 1 else "")
-            for i, (oid, mid, g, v, label, price, default) in enumerate(rows)]
+    rows = [r for m in menus for r in option_rows(m)]
+    out.append(",\n".join(
+        f"  ({q(oid)}, {q(mid)}, NULL, 'starbucks', {q(g)}, {q(v)}, {q(label)}, {price}, "
+        f"{'true' if default else 'false'})" for oid, mid, g, v, label, price, default in rows))
     out += ["ON CONFLICT (option_id) DO UPDATE",
             "   SET extra_price = EXCLUDED.extra_price, value_label = EXCLUDED.value_label,",
             "       is_default = EXCLUDED.is_default;", ""]
@@ -279,14 +405,13 @@ def main() -> None:
     path = sys.argv[1]
     menus, skipped = build(path)
     OUT.write_text(render(menus, pathlib.Path(path).name), encoding="utf-8")
-    active = [m for m in menus if m["active"]]
-    print(f"메뉴 {len(active)}종 활성 · {len(menus) - len(active)}종 비활성 · 옵션 "
-          f"{sum(len(option_rows(m)) for m in active)}행 -> {OUT.relative_to(ROOT)}")
+    _, dropped = load_aliases({m["menu_id"] for m in menus})
+    print(f"메뉴 {len(menus)}종 · 옵션 {sum(len(option_rows(m)) for m in menus)}행 -> {OUT.relative_to(ROOT)}")
     print(f"제외 {len(skipped)}행 (가격 없음 {sum(s['why'] == '가격 없음' for s in skipped)} · "
           f"같은 이름 변형 {sum(s['why'] != '가격 없음' for s in skipped)})")
-    for m in menus:
-        if m["note"]:
-            print(f"  {m['menu_id']} {m['name']}: {m['note']}")
+    if dropped:
+        print(f"[경고] 시드에 없는 메뉴를 가리켜 뺀 별칭 {len(dropped)}개: "
+              + ", ".join(f"{a['alias']}({a['menu_id']})" for a in dropped))
 
 
 if __name__ == "__main__":

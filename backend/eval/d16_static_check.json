@@ -1,0 +1,138 @@
+{
+  "self_check": {
+    "문서에만 있는 엔드포인트를 잡는가": true,
+    "코드에만 있는 엔드포인트를 잡는가": true
+  },
+  "files": [
+    {
+      "path": "backend/app/tools/",
+      "exists": true,
+      "files": 7,
+      "owner": "D-13"
+    },
+    {
+      "path": "backend/app/graph/",
+      "exists": true,
+      "files": 5,
+      "owner": "D-15"
+    },
+    {
+      "path": "backend/app/llm.py",
+      "exists": true,
+      "files": 1,
+      "owner": "D-04"
+    },
+    {
+      "path": "backend/app/main.py",
+      "exists": true,
+      "files": 1,
+      "owner": "D-06"
+    },
+    {
+      "path": "backend/prompts/",
+      "exists": true,
+      "files": 6,
+      "owner": "D-14"
+    },
+    {
+      "path": "backend/sql/",
+      "exists": true,
+      "files": 12,
+      "owner": "D-07 · D-08"
+    },
+    {
+      "path": "frontend/",
+      "exists": true,
+      "files": 6833,
+      "owner": "D-05"
+    },
+    {
+      "path": "backend/tests/",
+      "exists": true,
+      "files": 19,
+      "owner": "Q-03 전 — 있으면 센다"
+    },
+    {
+      "path": "backend/app/rag/",
+      "exists": false,
+      "files": 0,
+      "owner": "D-09 — U-15 미도입 판정으로 만들지 않음(D-08 0.1)"
+    }
+  ],
+  "endpoints": {
+    "doc_only": [],
+    "code_only": [],
+    "matched": 33,
+    "doc_total": 33
+  },
+  "nodes": {
+    "designed": [
+      "N-01",
+      "N-02",
+      "N-03",
+      "N-04",
+      "N-05",
+      "N-06",
+      "N-07",
+      "N-08",
+      "N-09",
+      "N-10"
+    ],
+    "code": {
+      "N-09": "apply_node",
+      "N-02": "batch_node",
+      "N-08": "ignore_node",
+      "N-01": "input_guard_node",
+      "N-03": "intake_node",
+      "N-05": "menu_node",
+      "N-10": "output_guard_node",
+      "N-04": "route_node",
+      "N-06": "target_node",
+      "N-07": "validation_node"
+    },
+    "doc_only": [],
+    "code_only": [],
+    "graph_nodes": 10
+  },
+  "tools": {
+    "designed": {
+      "TOOL-001": "search_menu",
+      "TOOL-002": "find_menu_by_traits",
+      "TOOL-003": "get_menu",
+      "TOOL-004": "get_order_item",
+      "TOOL-005": "list_order_items"
+    },
+    "code": {
+      "TOOL-001": "search_menu",
+      "TOOL-002": "find_menu_by_traits",
+      "TOOL-003": "get_menu",
+      "TOOL-004": "get_order_item",
+      "TOOL-005": "list_order_items"
+    },
+    "doc_only": [],
+    "code_only": []
+  },
+  "limits": [
+    {
+      "limit": "그래프 순회 상한",
+      "d12": 25,
+      "d03": 25,
+      "code": "config.GRAPH_RECURSION_LIMIT = 25",
+      "match": true
+    },
+    {
+      "limit": "되묻기 상한",
+      "d12": 3,
+      "d03": 3,
+      "code": "config.MAX_REASK = 3",
+      "match": true
+    },
+    {
+      "limit": "콘솔 지출 한도",
+      "d12": "콘솔",
+      "d03": "설정됨(.AP-key.md 2절)",
+      "code": "llm.py limit_reached 분리 · 재시도 0",
+      "match": true
+    }
+  ]
+}

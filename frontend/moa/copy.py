@@ -151,6 +151,8 @@ S5_SHARE_CAPTION = "복사하거나 저장하면 주문이 완료돼요"
 S5_SHARE_NAMES = "이름 같이 보내기"
 S5_SHARE_NAMES_OFF = "이름 없이 메뉴와 수량만 보내요"
 S5_SHARE_COPY = "텍스트 복사"
+# 브라우저가 클립보드를 막았을 때만 보인다 (평문 http · 사파리 구버전 — 4차 보고 2번)
+S5_COPY_FAILED = "브라우저가 복사를 막았어요. 아래 내용을 끌어서 복사해 주세요"
 S5_SHARE_IMAGE = "이미지 저장"
 S5_SHARE_IMAGE_LOADING = "이미지를 만들고 있어요"
 S5_BACK = "주문 정리로"
@@ -170,7 +172,7 @@ G0_TITLE = "Moa"
 G0_PROMPT = "서비스 비밀번호를 입력해 주세요"
 O6_LOGOUT = "나가기"
 O_ENV_BADGE = "실습 환경"
-O_REFRESH_NOTE = "{at} 갱신 · 5초마다"
+O_REFRESH_NOTE = "5초마다 갱신 · 시험 결과 30초 · 시간은 ms를 초로 환산"
 O4_TITLE = "승인 필요 ({n})"
 O4_EMPTY = "승인 필요 없음"
 O4_APPROVE = "승인"
@@ -190,6 +192,238 @@ O6_SEARCH_HINT = "주문 찾기: 확정 시각 · 매장"
 O6_COLUMNS = ["주문", "매장", "상태", "확정 시각", "변경", "복구"]
 O6_DETAIL_COLUMNS = ["시각", "누구", "전 → 후", "방법"]
 O6_SHARE_LABEL = "공유 기록"
+
+# --- SCR-006 고도화 (정본 시안 `Moa_운영대시보드.svg` 24 · 25-1 ~ 25-3 · 26) --------
+# 블록 A ~ F 는 05.리포트/운영대시보드_고도화안.md v0.2 의 구성이다.
+# 장애 이름은 쉬운 말을 먼저, 코드는 뒤에 작게 쓴다(고도화안 6절 원칙 2).
+# 장애 유형 이름 — PRD 5.6 장애 표 · backend workflows.FAULT_LABELS 와 같은 매핑이어야 한다.
+# UNKNOWN · REPLICA_DOWN 은 F 코드가 아니다(원인 미확인 에스컬레이션 · SC-12 복제본). 코드 자리에 그대로 쓴다
+FAULT_NAMES = {
+    "F-1": "주문 해석 오류 응답",
+    "F-2": "해석 응답 지연",
+    "F-3": "처리 프로세스 중단",
+    "F-4": "반복 장애",
+    "F-5": "잘못된 결과 형식",
+    "F-6": "DB 연결 끊김",
+    "UNKNOWN": "원인 미확인 장애",
+    "REPLICA_DOWN": "앱 복제본 중단",
+}
+# 평가 유형(PRD 5.6.1 FT-01 ~ FT-04)과 감지 메트릭 — D 격자 행 아래 작은 줄.
+# 평가 질문 "네트워크 · DB · API · LLM 유형별 감지 메트릭이 있는가"(PRD 1.2 P3-2)에 화면으로 답한다
+FAULT_METRIC = {
+    "F-1": "FT-01 dep_5xx_ratio",
+    "F-2": "FT-01 timeout_count",
+    "F-3": "FT-02 agent_error_count",
+    "F-4": "circuit_open_count",
+    "F-5": "FT-04 schema_error_rate",
+    "F-6": "FT-03 db_connection_error",
+}
+# 복구 전략(PRD 5.6 1차 · 2차 복구) — D 격자 복구 전략 열.
+# 평가 질문 "재시작 · 재연결 · 대체 모델 · 캐시 폴백 복구가 있는가"에 한 화면으로 답한다
+FAULT_STRATEGY = {
+    "F-1": "대체 전환",
+    "F-2": "재시도 → 전환",
+    "F-3": "재시작 · 재개",
+    "F-4": "회로 차단 · probe",
+    "F-5": "재생성 → 대체모델",
+    "F-6": "재연결 → 캐시",
+}
+# 서버 사건의 장애 코드 → 시험 유형(F-n). 서버가 `fault` 를 주면 그것을 먼저 쓴다
+FAULT_CODE_TO_F = {
+    "DEP_HTTP_5XX": "F-1",
+    "DEP_TIMEOUT": "F-2",
+    "WORKER_DOWN": "F-3",
+    "AGENT_EXCEPTION": "F-3",
+    "REPEATED_FAILURE": "F-4",
+    "AGENT_OUTPUT_INVALID": "F-5",
+    "DB_UNAVAILABLE": "F-6",
+    "DB_CONN_LOST": "F-6",
+    # F 코드가 아닌 둘 — 코드 자리에 그대로 보여 준다
+    "UNKNOWN": "UNKNOWN",
+    "REPLICA_DOWN": "REPLICA_DOWN",
+}
+
+# A 상태 배너 — 우선순위 표의 위에서부터 하나만 쓴다
+OA_APPROVAL = "승인이 필요해요"
+OA_APPROVAL_SUB = "{name}({code}) · {waited} 대기"
+OA_APPROVAL_TOGGLE = "승인 필요 {n}건"
+OA_FAILED = "자동 복구에 실패했어요"
+OA_INJECTED = "주입 후 {sec}초"
+OA_INJECTED_SUB = "탐지 대기 중 · {name}({code})"
+OA_RECOVERING = "복구 중"
+OA_RECOVERING_SUB = "{name}({code}) · {sec}초 경과"
+OA_DEGRADED = "정상 처리 중"
+OA_DEGRADED_BACKUP = "대체 해석기를 쓰고 있어요"
+OA_DEGRADED_RULE = "규칙 해석으로 처리하고 있어요"
+OA_DEGRADED_CACHE = "메뉴를 캐시로 조회하고 있어요"
+OA_NORMAL = "정상 운영 중"
+OA_NO_APPROVAL = "지금 승인할 일이 없어요"
+OA_RUN_SUFFIX = "{n}회차"
+
+# B 핵심 수치 4칸
+OB_CARDS = {
+    "mttd": ("탐지까지", "MTTD"),
+    "mttr": ("복구까지", "MTTR"),
+    "auto": ("사람 없이 복구", "무인 복구율"),
+    "integrity": ("주문 중복 · 유실", "데이터 무결성"),
+}
+OB_TARGET = {
+    "mttd": "목표 15초 이하",
+    "mttr": "목표 60초 · F-3 90초",
+    "auto": "목표 80% 이상",
+    "integrity": "목표 0건",
+}
+OB_PASS = "통과"
+OB_FAIL = "미달"
+OB_UNMEASURED = "미측정"
+
+# C 지금 요청 경로
+OC_TITLE = "지금 요청 경로"
+OC_GROUPS = {"gateway": "게이트웨이", "interpreter": "해석기", "store": "메뉴 저장소"}
+OC_ACTIVE = "사용 중"
+OC_STANDBY = "대기"
+OC_UNKNOWN = "상태 미수집"
+# SC-12 — 복제본 전환은 감지 · 전환 각 15초 이내
+OC_SWITCH = "전환 {sec}초 · 목표 15초"
+OC_BLOCKED = "차단 · {sec}초 후 시험"
+OC_BLOCKED_DEAD = "차단 · 응답 없음"
+OC_PROBING = "복귀 확인 {n}/{need}"
+OC_CACHE = "캐시로 조회 중"
+OC_NOTE_RULE = "규칙 해석으로 처리 중이에요 · 정확도가 낮을 수 있어요"
+OC_NOTE_PROBING = "복귀하려면 1차 해석기가 {need}회 연속 정상이어야 해요"
+OC_NOTE_CACHE = "메뉴 저장소가 끊겨 캐시로 조회하고 있어요 · 가격이 최신이 아닐 수 있어요"
+
+# D 장애 시험 결과
+OD_TITLE = "장애 시험 결과"
+OD_HINT = "숫자 = 복구 초 · 굵게 = 목표 초과"
+OD_RUNS = "{done}/{total}회 실시"
+# 실행 식별 줄 — 어느 실행의 숫자인지 없으면 25회 측정을 증빙할 수 없다
+# `{done}/{total}` 은 **격자에 채워진 칸 수**이지 그 실행의 회차가 아니다.
+# 둘을 한 문장에 "6/25회"로 붙여 두면 "이 실행이 25회 중 6회를 했다"로 읽힌다(2026-11-07 실측).
+OD_RUN_LINE = "최근 실행 {run_id} · 격자 {done}/{total}칸 · 예상 흐름 일치 {ok}/{valid}"
+# 막 시작해 판정이 아직 없는 실행 — 0/0 을 적지 않는다
+OD_RUN_LINE_SHORT = "최근 실행 {run_id} · 격자 {done}/{total}칸"
+OD_STRATEGY = "복구 전략"
+OD_SUCCESS = "성공"
+OD_F4_NOTE = "별도 · 분모 밖"
+OD_CELL_APPROVED = "승인"
+OD_CELL_FAILED = "실패"
+OD_CELL_INVALID = "무효"
+OD_CELL_RUNNING = "진행 중"
+OD_CELL_SWITCHED = "통과"
+OD_CELL_NOT_SWITCHED = "안 됨"
+OD_CELL_PENDING = "--"
+OD_LEGEND = [("auto", "사람 없이 복구"), ("approved", "승인 · 수동"), ("failed", "실패"),
+             ("invalid", "무효 · 분모 제외"), ("pending", "아직 안 함")]
+OD_TOTAL = "합계 {ok}/{valid} · {pct}%"
+OD_EMPTY = "아직 시험 결과를 받지 못했어요"
+
+# E 최근 사건
+OE_TITLE = "최근 사건"
+OE_HINT = "행을 누르면 타임라인이 펼쳐져요"
+OE_EMPTY = "기록된 장애가 없어요"
+OE_WAITING = "대기 중"
+OE_RUNNING = "{sec}초째"
+OE_JUST_NOW = "방금"
+OE_TL_LEGEND = [("pre", "탐지 전"), ("rec", "복구 중"), ("human", "사람 확인"), ("mark", "탐지 · 복구 시작 · 정상화")]
+OE_TL_START = "주입 0초"
+OE_CARDS = ["진단", "전략", "시도", "검증"]
+OE_DETAIL_PENDING = "사건 상세는 서버가 응답한 뒤에 보여 드려요"
+# 서버 전략 코드 → 쉬운 말
+OE_STRATEGY = {
+    "restart_resume": "워커 재시작",
+    "retry_fallback": "재시도 후 대체 해석기",
+    "switch_backup": "대체 해석기로 전환",
+    "cache_fallback": "캐시로 조회",
+    "reconnect_cache": "재연결 후 캐시 조회",
+    "rule_fallback": "규칙 해석으로 전환",
+    "replica_failover": "다른 복제본으로 전환",
+}
+
+# F 접힌 기록 · 장애 주입 도구줄
+OF_ORDERS_COUNT = "오늘 {n}건"
+OF_FAULT_TITLE = "장애 주입 (실습)"
+# 시험 층과 역할이 갈리는 지점을 화면에 적는다 — 위에서 정한 대상 · 유지 시간은 여기 적용되지 않는다
+OF_FAULT_NOTE = "1건 · 대상 고정 · 해제할 때까지 유지 (F-3은 즉시 1회)"
+# =============================================================================
+# 구역 3 장애 시험 — 정본 시안 `Moa_운영대시보드.svg` (T1 · T2 · T2-R, 2026-11-07 판)
+# 블록 배지 · 제목 · 보조 질문 칩 · 부제 · 결과가 가는 곳 칩까지 시안 문구 그대로다.
+# =============================================================================
+OZ_BADGE = "3"
+OZ_TITLE = "장애 시험"
+OZ_SUB = "일으킨다"
+OZ_LAB = "실습 환경에서만"
+
+# T1 도구 측정
+OT1_BADGE = "T1"
+OT1_TITLE = "도구 측정"
+OT1_ASK = "지금 진짜 복구되나"
+OT1_NOTE = "1건 · 대상 고정 · 해제할 때까지 유지 (F-3은 즉시 1회) · 복구는 상시 감시가 해요"
+OT1_WHERE = "결과가 가는 곳"
+OT1_CHIPS = [("A", "상태 배너"), ("B", "핵심 수치"), ("E", "최근 사건")]
+OT1_CONFIRM = "주입"
+OT1_CANCEL = "그만두기"
+OT1_HOLDING = "유지 중 · 상시 감시가 복구하는 중"
+OT1_HOLDING_HEAD = "{code} {name} · {target}"
+OT1_SEC = "{sec}초"
+OT1_CLEAR_ASK = "주입한 장애를 모두 해제할까요?"
+# 시험이 같은 대상을 쥐고 있는 동안 (시안 25-3)
+OT1_LOCKED = "복구 시험이 {target}를 쓰고 있어요 · F-3은 시험이 끝나면 누를 수 있어요"
+
+# T1 타일 설명 — 무엇이 일어나고 언제 끝나는지까지 한 줄에 쓴다
+OT1_HELP = {
+    "F-1": "해석기 1차가 서버 오류(5xx)를 반환해요 · 대체 해석기로 전환해요 · 해제할 때까지 유지",
+    "F-2": "해석기 1차가 6초 지연해요 · 재시도한 뒤 대체로 전환해요 · 해제할 때까지 유지",
+    "F-3": "앱 A backend를 실제로 중지합니다 · 상시 감시가 되살립니다 · 즉시 1회",
+    "F-4": "해석기 오류를 반복해요 · 회로가 차단되고 probe로 복귀를 봐요 · 해제할 때까지 유지",
+    "F-5": "해석기 1차가 형식이 깨진 결과를 돌려줘요 · 다시 생성해요 · 해제할 때까지 유지",
+    "F-6": "메뉴 저장소 연결을 끊어요 · 다시 연결한 뒤 캐시로 조회해요 · 해제할 때까지 유지",
+}
+# 도구줄의 고정 대상 — 고르는 축은 T2 에만 둔다 (backend incidents.FAULT_TARGETS 와 같은 값)
+OT1_TARGET = {
+    "F-1": "해석기 1차", "F-2": "해석기 1차", "F-3": "앱 A backend",
+    "F-4": "해석기 1차", "F-5": "해석기 1차", "F-6": "메뉴 저장소",
+}
+
+# T2 복구 시험
+OT2_BADGE = "T2"
+OT2_TITLE = "복구 시험"
+OT2_ASK = "얼마나 잘 복구되나"
+OT2_NOTE = "대상을 골라 반복해요 · 복구는 시험 워크플로가 하고 상시 감시는 비켜서요"
+OT2_MODES = {
+    "custom": ("직접 설정 · 1~10회", "유형 · 대상 · 횟수를 골라요 (기본 1회)"),
+    "full": ("전체 복구 측정 · 25회", "무인 복구율 분모를 만들어요 · F-4 제외"),
+}
+OT2_L_FAULT = "유형"
+OT2_L_TARGET = "대상"
+OT2_L_REPEAT = "횟수 · 1~10회"
+OT2_L_SECONDS = "유지 시간 · 1~120초"
+OT2_REPEAT_UNIT = "{n}회"
+OT2_SECONDS_UNIT = "{n}초"
+OT2_PREFLIGHT = "환경 점검"
+OT2_START = "시험 시작"
+OT2_PF_OFFLINE = "환경 점검을 하지 못했어요 · 서버에 연결되지 않았어요"
+OT2_PF_FAILED = "환경 점검 결과를 가져오지 못했어요"
+OT2_WHERE = "결과가 가는 곳"
+OT2_CHIPS = [("D", "장애 시험 결과 격자"), ("T2-R", "시험 기록")]
+OT2_FULL_FIXED = "전체 복구 측정은 5유형을 고정 순서로 돌려요 · 유형과 대상을 고르지 않아요"
+
+# T2-R 시험 기록
+OT2R_BADGE = "T2-R"
+OT2R_TITLE = "시험 기록"
+OT2R_NOTE = "예전 '빠른 확인' 기록은 직접 설정으로 보여요"
+# 빈 상태와 연결 실패를 **다른 문장으로** 말한다. 화면이 설명을 늘어놓지 않고 지금 상태만 말한다
+OT2R_EMPTY = "아직 시험 기록이 없어요 · 위에서 시험을 한 번 끝내면 여기에 남아요"
+OT2R_OFFLINE = "지금은 기록을 불러올 수 없어요 · 서버에 다시 연결되면 보여 드려요"
+
+OF_FAULT_HELP = {
+    "F-1": "해석기 1차가 5xx 를 반환합니다",
+    "F-2": "해석기 1차가 6초 지연합니다",
+    "F-3": "앱 A backend 를 실제로 중지합니다 · 상시 감시가 되살립니다",
+    "F-4": "F-1 을 반복해 회로 차단을 봅니다",
+    "F-5": "해석기 1차가 형식이 깨진 결과를 반환합니다",
+    "F-6": "메뉴 저장소 조회를 막습니다",
+}
 
 # --- 통신 실패 안내 ------------------------------------------------------------
 # 서버가 `user_message`를 주면 그것을 그대로 보여주고(D-02 2.2),

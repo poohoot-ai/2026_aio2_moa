@@ -18,6 +18,9 @@ BRAND = "brand"                       # 매장 기준 판별 결과 (라벨 · �
 BRAND_QUESTION = "brand_question"     # 되묻기 질문 (있으면 모달을 띄운다)
 BRAND_OTHER_OPEN = "brand_other_open"
 CHAT = "chat"                         # 채팅 말풍선 목록
+PENDING_CHAT = "pending_chat"         # 보낼 채팅 문장 + Idempotency-Key (4차 보고 1번)
+                                      # 제출한 실행에서 보내지 않는다 — chat_input 이 값을 비우는
+                                      # 재실행을 한 번 더 보내 그 실행을 취소하고, 결과 말풍선을 잃는다
 PROGRESS_OPEN = "progress_open"       # 진행 말풍선 펼침 여부 (끝나면 접힌 상태가 기본)
 RAW_OPEN = "raw_open"                 # 넣은 대화 원본 보기 펼침 여부
 PANEL_RAW_OPEN = "panel_raw_open"     # 주문서 패널 하단 "전체 대화" 펼침 여부 (2026-11-05 보고 9번)
@@ -50,6 +53,7 @@ _DEFAULTS = {
     BRAND_QUESTION: None,
     BRAND_OTHER_OPEN: False,
     CHAT: [],
+    PENDING_CHAT: None,
     PROGRESS_OPEN: False,
     RAW_OPEN: False,
     PANEL_RAW_OPEN: False,

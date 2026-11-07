@@ -188,9 +188,21 @@ def test_07_chat_route_falls_back_to_rules_when_the_llm_says_chatter():
     assert [e["route"] for e in events] == ["ignore"]
 
 
-def test_07_chat_never_creates_a_new_order():
-    """채팅으로 주문을 새로 만들지 않는다 — add 로 읽히면 ignore 로 둔다(대상 없는 변경 방지)."""
+def test_07_chat_creates_a_new_order_only_when_asked_to_add():
+    """2026-11-05 4차 보고 1번으로 규칙이 바뀌었다 — 채팅으로 주문을 **넣을 수 있다.**
+
+    종전 규칙은 "채팅으로 주문을 새로 만들지 않는다"였다. 단톡방에 늦게 온 주문을 넣을 길이
+    없어 담당자가 막혔다. 다만 `intake.classify` 는 **분류되지 않는 말을 add 로** 돌려주므로
+    (잡담 포함) 규칙 분기는 "넣어 달라"고 적은 문장만 add 로 본다 — 그 울타리가 없으면
+    "오늘 날씨 좋네요"가 주문이 된다. 넣을 대상 · 메뉴 판정은 `edits.add_from_chat` 이 한다.
+    """
     from app.graph import nodes
 
     events = [{"message_id": "chat", "route": "ignore", "event_type": "ignore"}]
-    assert nodes._chat_route("아이스 아메리카노 하나 주세요", events) == "ignore"
+    assert nodes._chat_route("박서연 아이스 아메리카노 한 잔 추가해줘", events) == "add"
+    assert [e["route"] for e in events] == ["add"]
+
+    # 넣으라고 적지 않은 말은 그대로 둔다
+    for chatter in ("아이스 아메리카노 하나 주세요", "오늘 날씨 좋네요", "다들 뭐 먹을래?"):
+        events = [{"message_id": "chat", "route": "ignore", "event_type": "ignore"}]
+        assert nodes._chat_route(chatter, events) == "ignore", chatter

@@ -2,11 +2,11 @@
 #
 #   docker compose -f docker-compose.core.yml -f docker-compose.core.dev.yml -p moa-core up -d
 #
-# 호스트에서 run_sql.py · uvicorn 이 DB 에 붙도록 127.0.0.1:5433 에만 연다 (PC 의 PostgreSQL 5432 와 안 부딪히게)
+# 호스트 개발 연결은 127.0.0.1:5434 에만 연다. 5433 이 다른 로컬 Compose 프로젝트에서 사용 중이다.
 services:
   db:
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5434:5432"
 
   # 게이트웨이 상태 페이지를 브라우저로 본다: http://localhost:8404/stats
   gateway:

@@ -17,6 +17,7 @@ D-07 7.2 가 "붙잡지 않고 새로 연다"로 지키려던 것 — DB 가 잠
 
 import threading
 from contextlib import contextmanager
+import time
 
 import psycopg
 from psycopg.rows import dict_row
@@ -83,13 +84,35 @@ def cursor(role: str = "app"):
             yield cur
 
 
+SLOW_QUERY_SEC = 2.0        # PRD 5.6.1 DB 판정 조건 "쿼리 2초 초과" (F-6 · FT-03)
+
+
+def _watch_query(sql: str, started: float) -> None:
+    """2초를 넘긴 쿼리를 감지 메트릭으로 남긴다.
+
+    메트릭 기록 자체가 DB 쓰기이므로 **메트릭 표를 건드리는 SQL 은 세지 않는다** — 세면 무한 재귀한다.
+    연결 오류(db_connection_error)는 여기서 적지 않는다: 연결이 실패한 상황에서 기록을 시도하면
+    connect -> 기록 -> connect 로 되돌아간다. 그쪽은 main.py 의 DbUnavailable 처리기가 적는다.
+    """
+    if "healing.runtime_metric" in sql:
+        return
+    if time.monotonic() - started < SLOW_QUERY_SEC:
+        return
+    from app.services import metrics
+
+    metrics.record("slow_query_count", "menu_store", 1, threshold=1, breached=True)
+
+
 def _read(sql: str, params, role: str, one: bool):
     """읽기 1건. 풀에 있던 연결이 끊겨 있었으면 새 연결로 한 번 더 한다."""
     for attempt in (1, 2):
+        started = time.monotonic()
         try:
             with cursor(role) as cur:
                 cur.execute(sql, params)
-                return cur.fetchone() if one else cur.fetchall()
+                rows = cur.fetchone() if one else cur.fetchall()
+            _watch_query(sql, started)
+            return rows
         except psycopg.OperationalError as exc:
             # statement_timeout(QueryCanceled)은 연결 문제가 아니다 — 다시 하지 않는다
             if attempt == 2 or isinstance(exc, psycopg.errors.QueryCanceled):
@@ -106,9 +129,12 @@ def fetch_one(sql: str, params=None, *, role: str = "app") -> dict | None:
 
 
 def execute(sql: str, params=None, *, role: str = "app") -> int:
+    started = time.monotonic()
     with cursor(role) as cur:
         cur.execute(sql, params)
-        return cur.rowcount
+        rows = cur.rowcount
+    _watch_query(sql, started)
+    return rows
 
 
 @contextmanager

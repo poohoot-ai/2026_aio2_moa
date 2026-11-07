@@ -100,6 +100,29 @@ def test_ambiguous_spec_has_no_amount_and_is_not_counted_as_zero(monkeypatch):
     assert lines[0]["cups"] == 1                       # 잔 수는 센다
 
 
+def test_settlement_check_for_log_judges_both_directions():
+    """로그에 남기는 정산 대조(settlement.check) — 정상은 통과, 미정 · 빈 세션은 실패 (G-A0 양방향)."""
+    ok = settlement.check([
+        {"person": "김민수", "estimated_price": 4500, "quantity": 1},
+        {"person": "김민수", "estimated_price": 5000, "quantity": 1},
+        {"person": "이지연", "estimated_price": 6500, "quantity": 1},
+        {"person": "박서연", "estimated_price": 9999, "quantity": 1, "removed": True},   # 삭제 항목은 빠진다
+    ])
+    assert ok["integrity_ok"] is True
+    assert ok["person_total"] == ok["item_total"] == 16000
+    assert ok["person_amounts"] == {"김민수": 9500, "이지연": 6500}
+
+    undecided = settlement.check([
+        {"person": "김민수", "estimated_price": 4500, "quantity": 1},
+        {"person": "이지연", "estimated_price": None, "quantity": 1},
+    ])
+    assert undecided["person_total"] == undecided["item_total"] == 4500   # 합계는 우연히 같지만
+    assert undecided["integrity_ok"] is False                            # 미정이 있으면 통과가 아니다
+    assert undecided["undecided_count"] == 1
+
+    assert settlement.check([])["integrity_ok"] is False
+
+
 # --- TC-055 행 편집 — 허용 밖 옵션 거부 (메뉴 범위) ----------------------------------------
 def test_option_scope_narrows_to_the_most_specific_level(monkeypatch):
     """분류 범위 행이 있으면 매장 공통 행보다 그것을 쓴다 — 티 분류의 샷 불가가 이 구조로 표현된다."""

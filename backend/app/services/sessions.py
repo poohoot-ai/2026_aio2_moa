@@ -226,6 +226,15 @@ def _referenced_menus(events, upto_index, *, brand_id, menu_version) -> list[dic
             found.extend(matched.get("candidates") or [])
         if found:
             break
+        # 더 거슬러 올라가기 전에 — 이 메시지가 **지금 못 내는 메뉴**를 가리키고 있나?
+        #
+        # 가리킨 것을 찾았는데 낼 수 없는 경우다. 여기서 멈춰야 한다. 그냥 지나치면
+        # 더 오래된 남의 주문을 집어 **확인 필요도 없이 조용히 확정된다** — 2026-11-07 실측:
+        # 최유나 "그럼 난 그걸로"(= 정하준이 말한 민트 초코)가 세 메시지 앞 박서연의
+        # 아이스 아메리카노로 정해졌다. 담당자는 안 시킨 커피를 받는다.
+        # 빈 목록으로 돌아가면 미등록으로 가고, 미등록은 담당자에게 묻는다(도메인 용어 "확인 필요").
+        if menu_service.unavailable_mentions(brand_id, menu_version, text):
+            return []
     return found[:5]
 
 

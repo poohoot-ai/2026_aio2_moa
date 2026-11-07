@@ -101,7 +101,9 @@ def run_pipeline_background(session_id: str, trace_id: str) -> None:
         logging_setup.log("checkpoint_save_failed", level="error", session_id=session_id,
                           trace_id=trace_id, step=_last_checkpoint(session_id),
                           db_down=isinstance(exc, db.DbUnavailable) or None,
-                          detail=f"pipeline failed: {type(exc).__name__}: {exc}"[:500])
+                          # 예외 **전문**은 남기지 않는다 — 대화 · 프롬프트 · 비밀값이 섞여 들어오는 경로다
+                          # (2026-11-07 QA H-33 · NFR-003). 오류 유형과 trace_id 로 추적한다
+                          detail=f"pipeline failed: {type(exc).__name__}")
         try:
             db.execute("UPDATE app.order_session SET status = 'failed', updated_at = NOW() "
                        " WHERE session_id = %s AND status IN ('running','recovering')",

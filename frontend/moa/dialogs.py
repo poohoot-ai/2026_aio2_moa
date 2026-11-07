@@ -404,15 +404,57 @@ def _without_names(share: dict) -> dict:
     """미리보기(서버 없음)에서만 쓰는 대체값 — 서버와 같은 규칙으로 이름 줄만 뺀다."""
     card = share.get("card") or {}
     lines = [{**line, "people": []} for line in card.get("lines") or []]
-    name_rows = {"  " + " · ".join(line["people"]) for line in card.get("lines") or [] if line.get("people")}
-    content = "\n".join(row for row in (share.get("content") or "").split("\n") if row not in name_rows)
+    # 주문자 줄은 서버가 "이름 없음 2명"처럼 묶어 쓰므로 이름 목록과 맞춰 보지 않고 머리말로 가른다
+    content = "\n".join(row for row in (share.get("content") or "").split("\n") if not row.startswith("주문자: "))
     return {**share, "card": {**card, "lines": lines}, "content": content}
 
 
+# 복사가 둘 다 실패했을 때만 펼치는 자리 — 담당자가 직접 끌어 복사한다.
+# Streamlit 이 `st.container(key=...)` 에 붙이는 클래스 이름이다(기본은 CSS 로 숨겨 둔다)
+COPY_FAILED_FLAG = "st-key-moa_copy_failed"
+
+
+def copy_script(text: str) -> str:
+    """클립보드에 넣는 스크립트 — **비보안 컨텍스트(평문 http)에서도 되는 경로를 함께 둔다.**
+
+    왜 두 경로인가 (브라우저 실측 2026-11-05)
+      `navigator.clipboard` 는 보안 컨텍스트(https · localhost)에만 있다. 배포한 화면은
+      게이트웨이 8501 을 평문 http 로 열기 때문에 `isSecureContext === false` 이고 그 API 가
+      **아예 없다.** 예전 코드는 `navigator.clipboard && …` 로 짧게 끊고 끝나서 아무 일도
+      일어나지 않았는데, 화면은 "복사했어요" 토스트를 띄우고 공유 완료로 기록했다 — 담당자는
+      단톡방에 붙여넣기를 하고 나서야 빈 것을 알았다(2026-11-05 4차 보고 2번).
+
+      같은 환경에서 `document.execCommand('copy')` 는 **된다**(실측으로 붙여넣기까지 확인).
+      오래된 방식이지만 평문 http 에서 쓸 수 있는 유일한 경로다.
+
+    실패를 삼키지 않는다 — 둘 다 못 하면 본문에 표시를 남겨 직접 복사할 자리를 연다.
+    """
+    return (
+        "<script>(function(){var t=" + json.dumps(text) + ";"
+        "function legacy(){try{"
+        "var a=document.createElement('textarea');a.value=t;a.setAttribute('readonly','');"
+        "a.style.position='fixed';a.style.left='-9999px';document.body.appendChild(a);"
+        "a.select();a.setSelectionRange(0,t.length);"
+        "var ok=document.execCommand('copy');document.body.removeChild(a);return ok;"
+        "}catch(e){return false;}}"
+        "function failed(){var f=document.querySelector('." + COPY_FAILED_FLAG + "');"
+        "if(f){f.style.display='block';}}"
+        "if(navigator.clipboard&&navigator.clipboard.writeText){"
+        "navigator.clipboard.writeText(t).catch(function(){if(!legacy()){failed();}});"
+        "}else if(!legacy()){failed();}"
+        "})();</script>")
+
+
 def copy_to_clipboard() -> None:
-    """[텍스트 복사]를 누른 바로 다음 실행에서 한 번만 클립보드에 넣는다."""
+    """[텍스트 복사]를 누른 바로 다음 실행에서 한 번만 클립보드에 넣는다.
+
+    복사한 내용을 **접어서 함께 둔다** — 브라우저가 둘 다 막으면(사파리 구버전 등) 담당자가
+    여기서 직접 끌어 복사한다. 복사가 됐으면 이 자리는 보이지 않는다.
+    """
     text = st.session_state.pop("_clipboard", None)
     if text is None:
         return
-    st.html(f"<script>navigator.clipboard && navigator.clipboard.writeText({json.dumps(text)})"
-            f".catch(()=>{{}});</script>", unsafe_allow_javascript=True)
+    st.html(copy_script(text), unsafe_allow_javascript=True)
+    with st.container(key="moa_copy_failed"):     # 기본은 CSS 로 숨어 있다 (tokens.py)
+        st.html(f'<div class="moa-copy-failed-text">{_esc(copy.S5_COPY_FAILED)}</div>')
+        st.code(text, language=None, wrap_lines=True)

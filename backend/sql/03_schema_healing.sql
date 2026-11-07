@@ -136,6 +136,16 @@ CREATE TABLE IF NOT EXISTS healing.runtime_metric (
 -- =====================================================================
 -- 5.2 인덱스 (healing)
 -- =====================================================================
+-- 2026-11-07 추가 — 사건의 **대상**과 **첫 징후 시각**
+--
+-- target: 없던 동안 중복 사건 판정이 장애 코드만 보고 이뤄졌다. 앱 A 의 F-3 이 열려 있으면
+--         앱 B 의 F-3 을 탐지하지 못했고, 닫히지 않은 사건 하나가 그 코드 전체를 막았다.
+-- first_signal_at: MTTD(= 탐지 − 장애 발생)의 시작점. 주입 장애는 injected_at 이 있지만
+--         저절로 난 장애에는 시작 시각이 없어 MTTD 평균이 구조적으로 늘 비어 있었다.
+--         첫 위반 관측(또는 첫 헬스체크 실패) 시각을 적어 둔다 — 지어내지 않고 관측한 값이다.
+ALTER TABLE healing.incident ADD COLUMN IF NOT EXISTS target          TEXT;
+ALTER TABLE healing.incident ADD COLUMN IF NOT EXISTS first_signal_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS idx_incident_list     ON healing.incident (detected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_incident_approval ON healing.incident (status)
   WHERE status = 'awaiting_approval';

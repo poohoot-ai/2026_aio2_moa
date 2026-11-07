@@ -30,7 +30,7 @@ def _too_large() -> envelope.ApiFailure:
 
 
 async def _read_conversation(request: Request) -> tuple[str, str]:
-    """JSON(raw_text) 또는 multipart(file). 파일은 확장자가 아니라 내용으로 판정한다."""
+    """JSON(raw_text) 또는 multipart(file). 파일은 `.txt` 확장자 + 텍스트 내용일 때만 받는다(chat_parse.judge_file)."""
     content_type = request.headers.get("content-type", "")
     if content_type.startswith("multipart/form-data"):
         form = await request.form()

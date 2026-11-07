@@ -1,0 +1,131 @@
+{
+  "checked_at": "2026-11-03T14:53:56+09:00",
+  "victim_session": "ORD-0007",
+  "attacker_session": "ORD-0008",
+  "result": "통과",
+  "cases": [
+    {
+      "kind": "정상",
+      "case": "자기 항목 조회 — get_order_item(자기 item_id)",
+      "verdict": "통과",
+      "expect": "통과",
+      "pass": true,
+      "detail": {
+        "item_id": "ORD-0008-it_01",
+        "반환": true
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "남의 항목 ID 조회 — get_order_item(피해자 item_id)",
+      "verdict": "차단",
+      "expect": "차단",
+      "pass": true,
+      "detail": {
+        "item_id": "ORD-0007-it_01",
+        "반환": {
+          "item": null
+        }
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "목록에 남의 항목이 섞이는가 — list_order_items()",
+      "verdict": "차단",
+      "expect": "차단",
+      "pass": true,
+      "detail": {
+        "반환 건수": 1,
+        "소유 세션": [
+          "ORD-0008"
+        ]
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "다른 매장 기준 메뉴 조회 — get_menu(sb_004, 세션은 generic)",
+      "verdict": "차단",
+      "expect": "차단",
+      "pass": true,
+      "detail": {
+        "반환": {
+          "menu": null,
+          "options": []
+        }
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "식별자를 인자로 끼워 넣기 — search_menu(['brand_id', 'query'])",
+      "verdict": "거부",
+      "expect": "거부",
+      "pass": true,
+      "detail": {
+        "사유": "search_menu: 식별자는 인자로 받지 않는다 — ['brand_id']"
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "식별자를 인자로 끼워 넣기 — get_order_item(['item_id', 'session_id'])",
+      "verdict": "거부",
+      "expect": "거부",
+      "pass": true,
+      "detail": {
+        "사유": "get_order_item: 식별자는 인자로 받지 않는다 — ['session_id']"
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "검색 결과에 다른 매장 기준 메뉴가 섞이는가 — search_menu(아메리카노)",
+      "verdict": "차단",
+      "expect": "차단",
+      "pass": true,
+      "detail": {
+        "반환": [
+          "gn_002",
+          "gn_001"
+        ]
+      }
+    },
+    {
+      "kind": "판정기 검증",
+      "case": "소유 조건 없는 취약 구현에 같은 공격",
+      "verdict": "유출",
+      "expect": "유출",
+      "pass": true,
+      "detail": {
+        "설명": "여기서 유출이 잡혀야 위의 '차단'이 의미를 가진다"
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "내 토큰으로 남의 세션 조회 — GET /api/sessions/{피해자}",
+      "verdict": "차단",
+      "expect": "차단",
+      "pass": true,
+      "detail": {
+        "status": 404
+      }
+    },
+    {
+      "kind": "공격",
+      "case": "변조한 관리 링크 토큰 — GET /api/sessions/{내 세션}",
+      "verdict": "차단",
+      "expect": "차단",
+      "pass": true,
+      "detail": {
+        "status": 404
+      }
+    },
+    {
+      "kind": "정상",
+      "case": "내 토큰으로 내 세션 조회 — GET /api/sessions/{내 세션}",
+      "verdict": "통과",
+      "expect": "통과",
+      "pass": true,
+      "detail": {
+        "status": 200
+      }
+    }
+  ]
+}

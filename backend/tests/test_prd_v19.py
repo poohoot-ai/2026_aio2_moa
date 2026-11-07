@@ -1,4 +1,4 @@
-"""PRD v1.9 반영 (2026-11-05) — 처리 계획(5.9.3) · FT-04 대체 모델 재요청 · 운영 비밀번호 기본값 · 스키마 문자열.
+"""PRD v1.9 반영 (2026-11-05) — 처리 계획(5.9.3) · F-5 재생성 한도 · 운영 비밀번호 · 스키마 문자열.
 
 장애 대응 층(6역할)은 대상이 아니다. 업무 층 · 스키마 · 설정에서 바뀐 것만 본다.
 """
@@ -50,32 +50,68 @@ def test_plan_key_is_in_run_state():
     assert "plan" in RunState.__annotations__
 
 
-# --- FT-04 대체 모델 재요청 1회 ---------------------------------------------------------------
-def test_backup_model_gets_one_try_after_regenerate_exhausted(interpreter, monkeypatch):
+# --- F-5 형식 오류 — 재생성 2회 → 대체 모델 1회 → NEEDS_REVIEW (승인 PRD FR-026 · FT-04) -------
+# 저장소 docs/PRD.md v1.3 의 F-5 행은 "재생성 2회 → NEEDS_REVIEW"만 적어 대체 모델 단계가 빠져 있다.
+# 승인 PRD(루트 PRD.md) FR-026 은 "같은 입력으로 최대 2회 재생성 → 대체 모델로 1회 → 넘으면 규칙 해석
+# 폴백 또는 NEEDS_REVIEW"를 P0 필수로 적는다. 정본을 따라 대체 모델 재요청 1회를 되살렸다(2026-11-06).
+def test_invalid_output_switches_to_backup_once_after_regenerate_exhausted(interpreter, monkeypatch):
+    monkeypatch.setattr(nodes, "_backup_ready", lambda: True)
+    attempted_services = []
+    original = interpreter_client.interpret_resilient
+
+    def record_service(*args, **kwargs):
+        attempted_services.append(kwargs.get("service", "primary"))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(interpreter_client, "interpret_resilient", record_service)
+    bad = interpreter_client.InterpreterError("AGENT_OUTPUT_INVALID", "x", service="primary")
+    interpreter.extend([bad, bad, bad, bad])
+    out = nodes.intake_node(_batch(msgs(1)))
+    assert out["llm_calls"] == 4                        # 최초 1 + 재생성 2 + 대체 모델 1 (FR-026)
+    assert attempted_services == ["primary"] * 3 + ["backup"]
+    assert out["events"][0]["event_type"] == "ignore"   # 대체 모델까지 실패하면 담당자에게 넘긴다
+    assert out["degraded"][0]["needs_review"] is True
+
+
+def test_backup_model_retry_result_is_used_when_it_passes(interpreter, monkeypatch):
     monkeypatch.setattr(nodes, "_backup_ready", lambda: True)
     bad = interpreter_client.InterpreterError("AGENT_OUTPUT_INVALID", "x", service="primary")
     interpreter.extend([bad, bad, bad, _contract("m1", event_type="ignore")])
     out = nodes.intake_node(_batch(msgs(1)))
-    assert out["llm_calls"] == 4                                           # 1 + 재생성 2 + 대체 1
-    assert out["events"][0]["event_type"] == "ignore" and not out.get("degraded")
+    assert out["llm_calls"] == 4
+    assert not out.get("degraded")                      # 대체 모델 해석이 통과하면 그 결과를 쓴다
 
 
-def test_backup_model_failure_still_falls_back_to_rules(interpreter, monkeypatch):
+def test_backup_model_retry_is_logged(interpreter, monkeypatch):
+    monkeypatch.setattr(nodes, "_backup_ready", lambda: True)
+    logged = []
+    monkeypatch.setattr(logging_setup, "log", lambda event, **f: logged.append((event, f)))
+    bad = interpreter_client.InterpreterError("AGENT_OUTPUT_INVALID", "x", service="primary")
+    interpreter.extend([bad, bad, bad, bad])
+    nodes.intake_node(_batch(msgs(1)))
+    # 로그 event 는 고정 목록이다 — 새 이름 대신 schema_invalid 에 detail 로 구분한다(D-03 결정 6)
+    assert any(e == "schema_invalid" and f.get("detail") == "backup_model_retry" for e, f in logged)
+
+
+def test_invalid_output_after_regeneration_is_not_replaced_by_rules(interpreter, monkeypatch):
     monkeypatch.setattr(nodes, "_backup_ready", lambda: True)
     bad = interpreter_client.InterpreterError("AGENT_OUTPUT_INVALID", "x", service="primary")
     interpreter.extend([bad, bad, bad, bad])
     out = nodes.intake_node(_batch(msgs(1)))
     assert out["llm_calls"] == 4
     assert out["degraded"][0]["reason"] == "regenerate_exhausted"
-    assert out["events"][0]["event_type"] == "add"                         # 지금처럼 규칙 해석
+    assert out["events"][0]["event_type"] == "ignore"
+    assert out["degraded"][0]["needs_review"] is True
 
 
-def test_no_backup_keeps_previous_behaviour(interpreter, monkeypatch):
+def test_invalid_output_without_backup_still_marks_review(interpreter, monkeypatch):
     monkeypatch.setattr(nodes, "_backup_ready", lambda: False)
     bad = interpreter_client.InterpreterError("AGENT_OUTPUT_INVALID", "x", service="primary")
     interpreter.extend([bad, bad, bad])
     out = nodes.intake_node(_batch(msgs(1)))
     assert out["llm_calls"] == 3
+    assert out["events"][0]["event_type"] == "ignore"
+    assert out["degraded"][0]["needs_review"] is True
 
 
 def test_backup_ready_needs_address(monkeypatch):
@@ -84,19 +120,21 @@ def test_backup_ready_needs_address(monkeypatch):
 
 
 # --- 운영 대시보드 비밀번호 기본값 (R-17) -------------------------------------------------------
-@pytest.mark.parametrize("env, value, expected, is_default", [
-    ("lab", "", "moa-ops", True),
+# 종전에는 lab 에서 코드의 짧은 고정 문자열로 로그인됐다. PRD R-17 이 "배포 전 제거하거나
+# .env 설정을 필수로 한다"로 정해 두었으므로 없앴다 — 환경과 무관하게 값이 없으면 막는다
+@pytest.mark.parametrize("env, value, expected, missing", [
+    ("lab", "", "", True),
     ("lab", "long-enough-pw", "long-enough-pw", False),
-    ("prod", "", "", False),                                               # 실습 밖에서는 로그인 막힘
+    ("prod", "", "", True),
     ("prod", "long-enough-pw", "long-enough-pw", False),
 ])
-def test_ops_password_default_only_in_lab(monkeypatch, env, value, expected, is_default):
+def test_ops_password_comes_only_from_the_environment(monkeypatch, env, value, expected, missing):
     monkeypatch.setenv("ENVIRONMENT", env)
     monkeypatch.setenv("OPS_DASHBOARD_PASSWORD", value)
     try:
         reloaded = importlib.reload(config)
         assert reloaded.OPS_DASHBOARD_PASSWORD == expected
-        assert reloaded.OPS_PASSWORD_IS_DEFAULT is is_default
+        assert reloaded.OPS_PASSWORD_MISSING is missing
     finally:
         monkeypatch.undo()
         importlib.reload(config)
@@ -117,7 +155,11 @@ def test_metrics_view_mttr_follows_sc3_and_appends_new_column_last():
     text = (SQL / "04_views.sql").read_text(encoding="utf-8")
     view = text[text.index("CREATE OR REPLACE VIEW healing.v_metrics"):]
     view = view[:view.index(";")]
-    assert "COALESCE(i.injected_at, f.injected_at, i.detected_at)" in view
+    # 시작점에 first_signal_at 이 끼어들었다(2026-11-07) — 저절로 난 장애의 **첫 징후** 시각이다.
+    # SC-3 의 뜻(복구까지 = 장애 시작부터)은 그대로고, 주입 시각이 없을 때 더 이른 관측을 쓴다.
+    assert "COALESCE(i.injected_at, f.injected_at, i.first_signal_at, i.detected_at)" in view
+    # MTTD 도 같은 기준이어야 한다 — 주입 시각이 없으면 첫 징후부터 잰다
+    assert "COALESCE(i.injected_at, f.injected_at, i.first_signal_at)" in view
     # CREATE OR REPLACE VIEW 는 기존 칸 순서를 바꿀 수 없다 — 새 칸은 맨 끝
     select_part = view[:view.index("FROM healing.incident")]
     assert select_part.rstrip().endswith("AS mttr_excl_pause_sec")

@@ -1,0 +1,344 @@
+{
+  "checked_at": "2026-11-03T23:20:46+09:00",
+  "model": "gpt-5.4-mini-2026-03-17",
+  "cases": [
+    {
+      "case": "특성 주문",
+      "lines": [
+        "[이지연] 나는 달달한 걸로 한잔 부탁해"
+      ],
+      "rules_only": {
+        "items": [
+          {
+            "person": "이지연",
+            "menu": "나는 달달한 걸로 한잔 부탁해",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 골라 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "이지연 님이 말한 표현에 맞는 메뉴를 골라 주세요",
+            "options": [
+              "그린 티 라떼",
+              "돌체 콜드 브루",
+              "딸기 딜라이트 요거트 블렌디드",
+              "민트 초콜릿 칩 블렌디드",
+              "바닐라라떼"
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "with_agents": {
+        "items": [
+          {
+            "person": "이지연",
+            "menu": "나는 달달한 걸로 한잔 부탁해",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 골라 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "이지연 님이 말한 표현에 맞는 메뉴를 골라 주세요",
+            "options": [
+              "그린 티 라떼",
+              "돌체 콜드 브루",
+              "딸기 딜라이트 요거트 블렌디드",
+              "민트 초콜릿 칩 블렌디드",
+              "바닐라라떼"
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "confirmed_unchanged": true
+    },
+    {
+      "case": "미등록 수식어",
+      "lines": [
+        "[정하준] 헤이즐넛 라떼 하나요"
+      ],
+      "rules_only": {
+        "items": [
+          {
+            "person": "정하준",
+            "menu": "헤이즐넛 라떼 하나요",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "정하준 님 \"헤이즐넛 라떼 하나요\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": [
+              "카페 라떼"
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "with_agents": {
+        "items": [
+          {
+            "person": "정하준",
+            "menu": "헤이즐넛 라떼 하나요",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "정하준 님 \"헤이즐넛 라떼 하나요\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": [
+              "카페 라떼"
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "tool": "search_menu",
+            "agent": "menu",
+            "route": "add"
+          }
+        ]
+      },
+      "confirmed_unchanged": true
+    },
+    {
+      "case": "시드에 없는 메뉴",
+      "lines": [
+        "[이지연] 녹차 프라푸치노 톨 하나"
+      ],
+      "rules_only": {
+        "items": [
+          {
+            "person": "이지연",
+            "menu": "녹차 프라푸치노 톨 하나",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "이지연 님 \"녹차 프라푸치노 톨 하나\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": []
+          }
+        ],
+        "tools": []
+      },
+      "with_agents": {
+        "items": [
+          {
+            "person": "이지연",
+            "menu": "녹차 프라푸치노 톨 하나",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "이지연 님 \"녹차 프라푸치노 톨 하나\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": []
+          }
+        ],
+        "tools": [
+          {
+            "tool": "search_menu",
+            "agent": "menu",
+            "route": "add"
+          }
+        ]
+      },
+      "confirmed_unchanged": true
+    },
+    {
+      "case": "대리 주문 · 군더더기",
+      "lines": [
+        "[박서연] 저는 조금 이따 볼게요",
+        "[김민수] 서연이 것도 라떼 하나 추가요"
+      ],
+      "rules_only": {
+        "items": [
+          {
+            "person": "서연이",
+            "menu": "서연이 것도 라떼 하나 추가요",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "서연이 님 \"서연이 것도 라떼 하나 추가요\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": [
+              "카페 라떼"
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "with_agents": {
+        "items": [
+          {
+            "person": "서연이",
+            "menu": "서연이 것도 라떼 하나 추가요",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "서연이 님 \"서연이 것도 라떼 하나 추가요\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": [
+              "카페 라떼"
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "confirmed_unchanged": true
+    },
+    {
+      "case": "줄임 표현",
+      "lines": [
+        "[최유나] 민초 블렌디드 하나요"
+      ],
+      "rules_only": {
+        "items": [
+          {
+            "person": "최유나",
+            "menu": "민초 블렌디드 하나요",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "최유나 님 \"민초 블렌디드 하나요\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": [
+              "민트 초콜릿 칩 블렌디드"
+            ]
+          }
+        ],
+        "tools": []
+      },
+      "with_agents": {
+        "items": [
+          {
+            "person": "최유나",
+            "menu": "민초 블렌디드 하나요",
+            "confirmed": false,
+            "status": "needs_review",
+            "reason": "메뉴를 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "최유나 님 \"민초 블렌디드 하나요\"는 메뉴판에서 찾지 못했어요. 메뉴를 골라 주세요",
+            "options": [
+              "민트 초콜릿 칩 블렌디드"
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "tool": "search_menu",
+            "agent": "menu",
+            "route": "add"
+          }
+        ]
+      },
+      "confirmed_unchanged": true
+    },
+    {
+      "case": "대상 모호 취소 (보조 검토)",
+      "lines": [
+        "[김민수] 아아 톨 2잔, 하나는 샷 추가요.",
+        "[김민수] 하나 취소할게요."
+      ],
+      "rules_only": {
+        "items": [
+          {
+            "person": "김민수",
+            "menu": "아이스 아메리카노",
+            "confirmed": true,
+            "status": "needs_review",
+            "reason": "어느 잔을 취소할지 확인해 주세요",
+            "llm_review": null
+          },
+          {
+            "person": "김민수",
+            "menu": "아이스 아메리카노",
+            "confirmed": true,
+            "status": "needs_review",
+            "reason": "어느 잔을 취소할지 확인해 주세요",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "김민수 님 주문 중 어느 것을 말하는지 골라 주세요",
+            "options": []
+          },
+          {
+            "text": "김민수 님 주문 중 어느 것을 말하는지 골라 주세요",
+            "options": []
+          }
+        ],
+        "tools": []
+      },
+      "with_agents": {
+        "items": [
+          {
+            "person": "김민수",
+            "menu": "아이스 아메리카노",
+            "confirmed": true,
+            "status": "needs_review",
+            "reason": "취소 대상이 두 잔 중 어느 잔인지 메시지로 구분되지 않아 확인이 필요합니다.",
+            "llm_review": null
+          },
+          {
+            "person": "김민수",
+            "menu": "아이스 아메리카노",
+            "confirmed": true,
+            "status": "needs_review",
+            "reason": "두 잔 중 어느 잔을 취소하는지 구분되지 않음",
+            "llm_review": null
+          }
+        ],
+        "questions": [
+          {
+            "text": "김민수 님 주문 중 어느 것을 말하는지 골라 주세요",
+            "options": []
+          },
+          {
+            "text": "김민수 님 주문 중 어느 것을 말하는지 골라 주세요",
+            "options": []
+          }
+        ],
+        "tools": []
+      },
+      "confirmed_unchanged": true
+    }
+  ]
+}

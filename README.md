@@ -83,7 +83,7 @@ docker compose -f docker-compose.app.yml  -p moa-b    up -d                     
 
 - 화면: http://localhost:8501 (게이트웨이)
 - 개발용으로 각 스택 · DB · 게이트웨이 상태 페이지를 직접 열려면 덧씌우기를 더한다 (127.0.0.1 에만 열린다)
-  - `docker compose -f docker-compose.core.yml -f docker-compose.core.dev.yml -p moa-core up -d` → DB `5433` · 상태 페이지 http://localhost:8404/stats
+  - `docker compose -f docker-compose.core.yml -f docker-compose.core.dev.yml -p moa-core up -d` → DB `5434` · 상태 페이지 http://localhost:8404/stats
   - `DEV_FRONT_PORT=8511 DEV_BACK_PORT=8001 docker compose -f docker-compose.app.yml -f docker-compose.app.dev.yml -p moa-a up -d` → A 화면 `8511` · API http://localhost:8001/docs (B 는 8512 · 8002)
 - 주문 해석 서비스는 기본이 **LLM 해석**(`INTERPRETER_SOURCE=llm`)이다. 같은 입력에 같은 결과가 필요하면(장애 실험 반복) 공용 스택을 `INTERPRETER_SOURCE=rules` 로 띄운다
 - 공용 스택을 먼저 띄운다 — compose 의 `depends_on` 은 프로젝트를 넘지 못한다. 정리는 앱 스택 · 공용 스택 순서로 `down` (**`-v` 금지** — DB 볼륨 `moa_pgdata` 가 지워진다)

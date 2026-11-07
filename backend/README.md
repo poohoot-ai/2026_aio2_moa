@@ -225,7 +225,7 @@ backend/
 │   ├── db.py            롤별 연결 풀 (app_rw · healing_rw)
 │   ├── envelope.py      응답 포장 · 오류 코드
 │   ├── ids.py           식별자 (ORD-0012 · 세션 범위 접두어)
-│   └── logging_setup.py JSON 로그 — event 17종 고정
+│   └── logging_setup.py JSON 로그 — event 고정 목록
 ├── interpreter/         주문 해석 서비스 (DEP-001) — 1차 · 대체가 같은 코드, 모드 4종
 ├── prompts/             ★ 에이전트 런타임 프롬프트 5개 — 제품 자산. 정본은 D-11 프롬프트명세서, 바꾸면 D-11 이력 먼저
 ├── sql/                 스키마 · 시드 · run_sql.py (DB 초기화)

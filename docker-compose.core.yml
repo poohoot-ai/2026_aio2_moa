@@ -57,7 +57,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
-      timeout: 3s
+      timeout: 10s
       retries: 10
 
   # 주문 해석 서비스 2계통 — backend 와 같은 이미지, 역할만 다르다. 두 앱 스택이 함께 쓴다
@@ -126,12 +126,15 @@ services:
   # healing 코드가 들어오기 전까지 빈 명령으로 자리만 잡는다 → 코드가 생기면 command 를 ["python", "-m", "healing"] 으로
   healing:
     image: ${REGISTRY:-}moa-backend:${TAG:-latest}
-    command: ["sleep", "infinity"]
+    command: ["python", "-m", "healing"]
     # backend/.env 를 통째로 넘기지 않는다 — LLM 키 등 healing 이 쓰지 않는 비밀값까지 들어가므로 필요한 값만 준다
     environment:
       # 연결 규칙 (기획서 6절 배포 구성) — healing 담당과 합의한 값
       DOCKER_HOST: tcp://socket-proxy:2375
       GATEWAY_STATS_URL: "http://gateway:8404/stats;csv"
+      ORDER_INTERPRETER_PRIMARY_URL: http://interpreter-primary:8101
+      ORDER_INTERPRETER_BACKUP_URL: http://interpreter-backup:8102
+      ENVIRONMENT: ${ENVIRONMENT:-lab}
       HEALING_ALLOWLIST: moa-a-backend-1,moa-b-backend-1,moa-a-frontend-1,moa-b-frontend-1
       # 대상 상태 확인: http://<허용목록 이름>:8000/health (backend 는 moa_core 에서 컨테이너 이름으로 보인다)
       # healing_rw = healing 스키마 R/W · app 스키마 읽기만 (sql/01_roles.sql)

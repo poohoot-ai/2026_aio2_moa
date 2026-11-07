@@ -84,7 +84,7 @@ def batch_node(state: dict) -> dict:
     if state.get("source") == "snapshot":
         saved = _saved_events(state["session"])
         if saved is not None:
-            # 로그 event 는 17종 고정(D-03 결정 ⑥) — 새 이름 대신 checkpoint_saved 에 resumed 를 단다
+            # 로그 event 는 고정 목록(D-03 결정 ⑥) — 새 이름 대신 checkpoint_saved 에 resumed 를 단다
             logging_setup.log("checkpoint_saved", session_id=state["session"]["session_id"],
                               trace_id=state.get("trace_id"), checkpoint="chat_read",
                               resumed=True, events=len(saved))
@@ -117,7 +117,7 @@ def _record_plan(state: dict, batches: list[dict], service: str | None, *, resum
     """처리 계획 (Planner · PRD 5.9.3) — N-02 가 이미 정한 값을 계획 한 장으로 모아 남긴다.
 
     계획을 바꾸는 판단은 하지 않는다(값은 위 batch_node 가 정했다). 기록만 한다 — 실행 결과와 대조하려고.
-    로그 event 는 17종 고정(D-03 결정 ⑥)이라 새 이름 대신 route_decision 에 stage="plan" 을 단다.
+    로그 event 는 고정 목록(D-03 결정 ⑥)이라 새 이름 대신 route_decision 에 stage="plan" 을 단다.
     `source` 키는 쓰지 않는다 — 분류 결과 route_decision(source=snapshot · chat · reply)과 섞이지 않게.
     """
     llm_batches = [b["batch_no"] for b in batches if b.get("use_llm")]
@@ -207,14 +207,21 @@ def _pick_service() -> str | None:
     states = {}
     if config.db_configured():
         try:
-            rows = db.fetch_all("SELECT dependency_key, state FROM healing.circuit_state", role="healing")
-            states = {r["dependency_key"]: r["state"] for r in rows}
+            rows = db.fetch_all("SELECT dependency_key, state, cooldown_until FROM healing.circuit_state",
+                                role="healing")
+            states = {r["dependency_key"]: r for r in rows}
         except Exception:      # noqa: BLE001 — 스위치를 못 읽으면 마지막 기본값(1차)
             states = {}
-    usable = ("up", "degraded")
-    if config.ORDER_INTERPRETER_PRIMARY_URL and states.get("order_interpreter_primary", "up") in usable:
+
+    def ok(key: str) -> bool:
+        # 회로 해석은 interpreter_client.circuit_usable 한 곳이다 — 냉각이 지난 circuit_open 은
+        # 시험 요청 1회를 받는다(PRD 5.6 F-4). 여기서 따로 판단하면 요청 경로와 규칙이 갈린다
+        row = states.get(key) or {}
+        return interpreter_client.circuit_usable(row.get("state", "up"), row.get("cooldown_until"))
+
+    if config.ORDER_INTERPRETER_PRIMARY_URL and ok("order_interpreter_primary"):
         return "primary"
-    if config.ORDER_INTERPRETER_BACKUP_URL and states.get("order_interpreter_backup", "up") in usable:
+    if config.ORDER_INTERPRETER_BACKUP_URL and ok("order_interpreter_backup"):
         return "backup"
     return None
 
@@ -223,7 +230,8 @@ def _pick_service() -> str | None:
 def intake_node(state: dict) -> dict:
     """N-03 의도분류 (Intake Agent) — classify.md 로 묶음을 읽어 이벤트마다 route 를 정한다.
 
-    계약 위반 · 누락 → 재생성 2회 → 소진 · 해석 서비스 장애 · 호출 상한이면 그 묶음은 규칙 해석.
+    계약 위반 · 누락 → 재생성 2회 → 대체 모델 재요청 1회(FR-026 · FT-04) → 소진이면 확인 필요.
+    해석 서비스 장애 · 호출 상한이면 그 묶음은 규칙 해석.
     """
     batch, session = state["batch"], state["session"]
     targets = batch["targets"]
@@ -244,10 +252,10 @@ def intake_node(state: dict) -> dict:
     elif not batch["use_llm"] and _interpreter_ready():
         reason = "llm_call_cap"
     attempts = 0
-    while service and attempts <= config.MAX_REGENERATE:
+    while service and attempts < 1 + config.MAX_REGENERATE:
         try:
             calls += 1
-            result = interpreter_client.interpret(
+            result = interpreter_client.interpret_resilient(
                 "extract_events", wire, context, service=service,
                 trace_id=state.get("trace_id"), session_id=session["session_id"])
             known = target_ids | {m["message_id"] for m in batch["prev"]}
@@ -285,9 +293,13 @@ def intake_node(state: dict) -> dict:
             if exc.fault_code == "AGENT_OUTPUT_INVALID":
                 attempts += 1
                 reason = "regenerate_exhausted"
-                if attempts > config.MAX_REGENERATE and service == "primary" and _backup_ready():
-                    # FT-04 대체 모델 재요청 1회 (PRD 5.6 F-5 · FR-026) — 1차 재생성을 다 쓴 묶음만.
-                    # 성공하면 그 묶음은 대체 모델 해석으로, 실패하면 지금처럼 규칙 해석으로 내려간다
+                context["validation_feedback"] = {"error": exc.fault_code, "missing_fields": exc.missing_fields,
+                                                "attempt": attempts, "instruction": "Regenerate the complete response and satisfy the declared schema; do not omit required fields."}
+                if attempts >= 1 + config.MAX_REGENERATE and service == "primary" and _backup_ready():
+                    # FT-04 대체 모델 재요청 1회 (승인 PRD FR-026 · PRD 5.6 F-5) — 1차 재생성을 다 쓴 묶음만.
+                    # 성공하면 그 묶음은 대체 모델 해석으로, 실패하면 아래에서 확인 필요로 담당자에게 넘긴다.
+                    # attempts 를 MAX_REGENERATE 로 되돌려 while 조건이 딱 한 번만 더 돌게 한다.
+                    # 로그 event 는 고정 목록이라 새 이름 대신 schema_invalid 에 detail 을 단다(D-03 결정 ⑥)
                     logging_setup.log("schema_invalid", level="warning", session_id=session["session_id"],
                                       trace_id=state.get("trace_id"), agent="intake",
                                       detail="backup_model_retry", batch_no=batch["batch_no"])
@@ -295,9 +307,16 @@ def intake_node(state: dict) -> dict:
                 continue
             reason = exc.fault_code                       # 의존 서비스 장애 — 복구는 장애 대응 층
             break
-    if attempts > config.MAX_REGENERATE:
+    if attempts >= 1 + config.MAX_REGENERATE:
         reason = "regenerate_exhausted" if reason != "missing_events" else "missing_events"
 
+    if reason == "regenerate_exhausted":
+        events = intake.from_contract(
+            [{"message_id": m["message_id"], "event_type": "ignore"} for m in targets],
+            targets, known_ids=target_ids)
+        return {"events": _ordered(events), "llm_calls": calls,
+                "degraded": [{"batch_no": batch["batch_no"], "reason": "regenerate_exhausted",
+                              "messages": len(targets), "needs_review": True}]}
     events = intake.extract_events(targets, brand_id=session["brand_id"],
                                    menu_version=session["menu_version"])
     degraded = [] if reason == "interpreter_unset" else [
@@ -600,7 +619,9 @@ def target_node(state: dict) -> dict:
     if source == "chat":
         actionable = next((e for e in events if e["route"] != "ignore"), None)
         route = actionable["route"] if actionable else _chat_route(state["text"], events)
-        target = edits._find_target(session["session_id"], state["text"]) if route != "ignore" else None
+        # 새 주문(add)은 가리킬 앞 주문이 없다 — 대상을 찾으면 **남의 행을 고르게 된다**(4차 보고 1번)
+        target = (edits._find_target(session["session_id"], state["text"])
+                  if route not in ("ignore", "add") else None)
         return {"targets": {"ordered": events, "event_type": route, "target": target}}
     if source == "reply":
         by_seq = {}
@@ -640,11 +661,21 @@ def _chat_route(text: str, events: list[dict]) -> str:
 
     system.md 규칙 4 는 **대화 속 지시**를 주문이 아닌 말로 다루라고 한다. 그런데 채팅 입력은
     담당자 본인이 이 시스템에 하는 지시다 — "박서연 과장님은 제외"가 ignore 로 분류되어
-    "주문에서 바꿀 것을 찾지 못했어요"만 돌아왔다. 규칙이 변경 · 취소로 읽으면 그것을 따른다.
-    새 주문(add)으로는 올리지 않는다 — 채팅으로 주문을 새로 만드는 경로는 없다.
+    "주문에서 바꿀 것을 찾지 못했어요"만 돌아왔다. 규칙이 변경 · 취소 · 추가로 읽으면 그것을 따른다.
+
+    **add 는 "추가"라고 적은 문장에만 따른다**(4차 보고 1번). 예전에는 "채팅으로 주문을 새로
+    만드는 경로는 없다"며 전부 버렸고, 단톡방에 늦게 온 주문을 넣을 길이 없었다. 지금은 N-09 가
+    `edits.add_from_chat` 으로 받는다.
+
+    그런데 `intake.classify` 는 **분류되지 않는 말을 add 로 돌려준다** — "오늘 날씨 좋네요"도
+    add 다. 규칙만 믿고 열면 잡담이 주문이 된다. 그래서 여기서는 넣으라고 적은 문장만 add 로
+    본다. LLM 이 add 로 읽은 경우는 이 함수를 지나지 않는다(그때는 그 판정을 따른다).
     """
     ruled = intake.classify(text)
-    if ruled in ("update", "cancel"):
+    # 울타리의 정본은 `edits.ADD_INSTRUCTION` 하나다 — 같은 규칙을 두 곳에 두지 않는다
+    if ruled == "add" and not edits.ADD_INSTRUCTION.search(text or ""):
+        return "ignore"
+    if ruled in ("update", "cancel", "add"):
         for event in events:
             event["route"] = event["event_type"] = ruled      # 출력 가드의 ignore 검사와 어긋나지 않게
         return ruled
@@ -656,6 +687,13 @@ def _candidates(rows: list[dict], event: dict) -> list[dict]:
     live = [r for r in rows if not r.get("_removed")]
     if event.get("target_message_id"):
         hit = [r for r in live if r["_message_id"] == event["target_message_id"]]
+        # 가리킨 메시지가 **남의 주문**이면 쓰지 않는다. 해석 서비스가 대상을 잘못 짚는 일이 있다 —
+        # 실측 2026-11-07 ORD-0034: 김민수의 "아까 샷 추가한 한 잔 취소할게요" 가 박서연의 m3 을
+        # 가리켰고(target_unclear=false), 그 바람에 취소가 반영되지 않고 질문도 뜨지 않았다.
+        # 남의 잔을 취소하는 것은 조용히 사라지는 것보다 더 나쁘다. 사람 기준으로 돌아가
+        # 문장의 단서(샷 추가 등)로 좁힌다 — _narrow_by_options 가 그 일을 한다
+        if event.get("person"):
+            hit = [r for r in hit if r["person"] == event["person"]]
         if hit:
             return _distinct(hit)
     hint = (event.get("target_hint") or "").strip()
@@ -814,6 +852,17 @@ def validation_node(state: dict) -> dict:
     return {"rows": rows}
 
 
+def _settlement_for_log(session_id: str) -> dict | None:
+    """route_decision 에 붙일 정산 대조 (SC-5). 로그 재료일 뿐이므로 DB 를 못 읽으면 칸을 비우고 넘어간다.
+
+    분석 실패로 번지지 않게 한다 — DB 장애 자체는 db_unavailable 이 따로 남긴다.
+    """
+    try:
+        return settlement.check(sessions.items(session_id))
+    except db.DbUnavailable:
+        return None
+
+
 # --- N-09 ------------------------------------------------------------------------------
 def apply_node(state: dict) -> dict:
     """N-09 결과 반영 (Settlement 포함) — source 별로 남긴다. 단계마다 체크포인트.
@@ -953,13 +1002,18 @@ def output_guard_node(state: dict) -> dict:
                       plan_id=(state.get("plan") or {}).get("plan_id"),
                       planned_llm_batches=len((state.get("plan") or {}).get("llm_batches") or []),
                       degraded_batches=len({d.get("batch_no") for d in state.get("degraded") or []
-                                            if d.get("batch_no") is not None}))
+                                            if d.get("batch_no") is not None}),
+                      # 정산 대조 (SC-5) — 사람별 금액 합 = 전체 금액. 새 event 를 만들지 않는다(17종 고정)
+                      settlement=_settlement_for_log(session["session_id"]))
     if source == "snapshot":
         with db.transaction() as cur:
             pending = sessions.review_count(session["session_id"])
+            needs_review = pending or any(d.get("needs_review") for d in state.get("degraded") or [])
             sessions.set_status(cur, session["session_id"],
-                                "needs_review" if pending else "awaiting_confirmation")
+                                "needs_review" if needs_review else "awaiting_confirmation")
         result["review_count"] = sessions.review_count(session["session_id"])
+        if any(d.get("needs_review") for d in state.get("degraded") or []):
+            result["needs_review"] = True
     return {"result": result, "guard": guard}
 
 

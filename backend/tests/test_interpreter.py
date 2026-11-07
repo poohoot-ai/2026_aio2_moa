@@ -169,3 +169,31 @@ def test_request_body_has_no_raw_pii(monkeypatch):
     assert sent["context"]["brand_id"] == "starbucks"
     assert sent["context"]["existing_items"][0]["item_id"] == "ORD-0001-it_01"
     assert "010-1234-5678" in messages[0]["text"]                            # 호출부의 원본은 그대로
+
+
+# --- 회로 차단은 냉각 뒤 시험 요청 1회를 허용한다 (PRD 5.6 F-4) ------------------------------
+# 실측 결함 2026-11-06: `_circuit_blocked` 가 `cooldown_until` 을 읽고도 쓰지 않아,
+# state='circuit_open' 이면 냉각이 지난 뒤에도 영구히 막았다. 회로를 닫는 코드는 healing 의
+# `_probe_circuit` 하나이고 그것도 F-4 분기에서만 불리므로, 1차 해석 서비스가 한 번 열리면
+# F-4 시험을 돌릴 때까지 **모든 주문 해석이 대체 서비스로** 갔다(실측: 1시간 반 동안 열린 채).
+# 그 상태에서는 F-1 시험도 1차를 아예 부르지 않아 "5xx 감지 → 전환"을 검증하지 못한다.
+# PRD 5.6 F-4 정책은 "회로 차단 · 자동 복구 중단 → 60초 후 시험 요청 1회 → 실패 시 운영자 승인"이다.
+@pytest.mark.parametrize("state,cooldown_sec,blocked", [
+    ("up", None, False),
+    ("degraded", None, False),
+    ("circuit_open", 30, True),      # 냉각 중 — 막는다
+    ("circuit_open", -1, False),     # 냉각이 지났다 — 시험 요청 1회를 통과시킨다
+    ("circuit_open", None, True),    # 냉각 값이 없으면 막아 둔다 (_circuit_record 는 열 때 항상 넣는다)
+    ("down", None, True),
+    ("probing", None, True),         # healing 이 시험 요청 중 — 업무 층은 끼어들지 않는다
+])
+def test_circuit_blocked_lets_one_trial_through_after_cooldown(monkeypatch, state, cooldown_sec, blocked):
+    import datetime as _dt
+
+    from app import db
+
+    cooldown = (None if cooldown_sec is None else
+                _dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(seconds=cooldown_sec))
+    monkeypatch.setattr(config, "db_configured", lambda: True)
+    monkeypatch.setattr(db, "fetch_one", lambda *a, **k: {"state": state, "cooldown_until": cooldown})
+    assert interpreter_client._circuit_blocked("primary") is blocked

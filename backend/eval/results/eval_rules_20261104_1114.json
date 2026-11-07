@@ -1,0 +1,3563 @@
+{
+  "condition": "rules",
+  "model": null,
+  "questions_in_run": 65,
+  "runs": [
+    {
+      "attempt": 1,
+      "summary": {
+        "questions": 60,
+        "axis1_route_accuracy": 0.642,
+        "axis1_question_level": 0.5667,
+        "axis2_items_accuracy": 0.6172,
+        "axis3_review_recall": 0.9091,
+        "axis4_over_review_rate": 0.8182,
+        "axis6_evidence_accuracy": 0.6667,
+        "axis7_llm_calls": 0,
+        "axis7_max_latency_sec": 0.25,
+        "axis7_degraded_questions": 0
+      },
+      "questions": [
+        {
+          "id": "EV-001",
+          "type": "basic",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.22,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-002",
+          "type": "basic",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 2,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 2,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'grande', ())": 2
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'grande', ())": 2
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-003",
+          "type": "trap",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('이지연', 'sb_006', '', (('ice', 'less'),))": 1
+            },
+            "actual_groups": {
+              "('이지연', 'sb_006', '', (('ice', 'less'),))": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-004",
+          "type": "basic",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('최유나', 'sb_016', 'venti', ())": 1
+            },
+            "actual_groups": {
+              "('최유나', 'sb_016', 'venti', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-005",
+          "type": "multi",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 2,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 2,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('김민수', 'sb_004', 'tall', (('shot', 'extra'),))": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('김민수', 'sb_004', 'tall', (('shot', 'extra'),))": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 2,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-006",
+          "type": "boundary",
+          "intent": "INT-002",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 2,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('박서연', 'sb_012', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', '?', '', ())": 1,
+              "('김민수', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 2.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-007",
+          "type": "basic",
+          "intent": "INT-002",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 2,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', '?', '', ())": 1,
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 2.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-008",
+          "type": "trap",
+          "intent": "INT-002",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.5,
+            "expected_groups": {
+              "('최유나', 'sb_004', 'tall', ())": 1,
+              "('?', 'sb_004', '', ())": 1
+            },
+            "actual_groups": {
+              "('최유나', 'sb_004', 'tall', ())": 1,
+              "('정하준', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 1,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-009",
+          "type": "basic",
+          "intent": "INT-002",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 2,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('정하준', 'sb_014', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('정하준', '?', '', ())": 1,
+              "('최유나', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 2.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-010",
+          "type": "boundary",
+          "intent": "INT-003",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.5,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('이지연', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 1,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": 0.0
+          },
+          "evidence_ok": true,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-011",
+          "type": "evidence",
+          "intent": "INT-003",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('최유나', 'sb_001', '', ())": 1
+            },
+            "actual_groups": {
+              "('최유나', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": true,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-012",
+          "type": "evidence",
+          "intent": "INT-003",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 3,
+            "actual_cups": 3,
+            "matched_cups": 2,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 2,
+            "ok": false,
+            "accuracy": 0.6667,
+            "expected_groups": {
+              "('김민수', 'sb_013', 'grande', ())": 1,
+              "('박서연', 'sb_016', 'tall', ())": 1,
+              "('이지연', 'sb_013', 'grande', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_013', 'grande', ())": 1,
+              "('박서연', 'sb_016', 'tall', ())": 1,
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 2,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": 0.0
+          },
+          "evidence_ok": false,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-013",
+          "type": "boundary",
+          "intent": "INT-011",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('이지연', '?', '', ())": 1
+            },
+            "actual_groups": {
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-014",
+          "type": "basic",
+          "intent": "INT-011",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', '?', '', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-015",
+          "type": "basic",
+          "intent": "INT-011",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('최유나', '?', '', ())": 1
+            },
+            "actual_groups": {
+              "('최유나', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-016",
+          "type": "boundary",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', '?', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": 1.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-017",
+          "type": "trap",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('정하준', '?', '', ())": 1
+            },
+            "actual_groups": {
+              "('정하준', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-018",
+          "type": "trap",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('이지연', '?', '', ())": 1
+            },
+            "actual_groups": {
+              "('이지연', '?', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-019",
+          "type": "trap",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', 'sb_004', '', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_004', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-020",
+          "type": "trap",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 30,
+            "actual_cups": 30,
+            "matched_cups": 30,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 30,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 30
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 30
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-021",
+          "type": "trap",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('최유나', 'sb_003', '', ())": 1
+            },
+            "actual_groups": {
+              "('최유나', 'sb_003', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-022",
+          "type": "boundary",
+          "intent": "INT-004",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 2,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('이지연', 'sb_013', 'venti', ())": 1
+            },
+            "actual_groups": {
+              "('이지연', 'sb_013', '', ())": 1,
+              "('이지연', '?', 'venti', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 2.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-023",
+          "type": "basic",
+          "intent": "INT-004",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', (('ice', 'less'),))": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', (('ice', 'less'),))": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-024",
+          "type": "basic",
+          "intent": "INT-004",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 2,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('박서연', 'sb_012', 'tall', (('shot', 'extra'),))": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_012', 'tall', ())": 1,
+              "('박서연', '?', '', (('shot', 'extra'),))": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": 1.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-025",
+          "type": "trap",
+          "intent": "INT-004",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.5,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('김민수', 'sb_012', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('김민수', 'sb_012', 'grande', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 2,
+            "want_fixed": 0,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": 0.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-026",
+          "type": "basic",
+          "intent": "INT-005",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', 'sb_012', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_012', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-027",
+          "type": "basic",
+          "intent": "INT-005",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('최유나', 'sb_014', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('최유나', 'sb_016', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-028",
+          "type": "basic",
+          "intent": "INT-005",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('정하준', 'sb_002', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('정하준', 'sb_002', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.05,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-029",
+          "type": "basic",
+          "intent": "INT-006",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-030",
+          "type": "basic",
+          "intent": "INT-006",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.5,
+            "expected_groups": {
+              "('이지연', 'sb_012', 'tall', ())": 2
+            },
+            "actual_groups": {
+              "('이지연', 'sb_012', 'tall', ())": 1,
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": 1.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-031",
+          "type": "basic",
+          "intent": "INT-006",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 2,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 2,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 2
+            },
+            "actual_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 2
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-032",
+          "type": "basic",
+          "intent": "INT-004",
+          "source": "chat",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "update"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', 'sb_004', 'grande', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_004', 'grande', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.2,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-034",
+          "type": "basic",
+          "intent": "INT-007",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "cancel"
+              ]
+            ],
+            "actual": [
+              [
+                "cancel"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-035",
+          "type": "boundary",
+          "intent": "INT-007",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "cancel"
+              ]
+            ],
+            "actual": [
+              [
+                "cancel"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 2,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 2,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('김민수', 'sb_004', 'tall', (('shot', 'extra'),))": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('김민수', 'sb_004', 'tall', (('shot', 'extra'),))": 1
+            }
+          },
+          "review": {
+            "want_review": 2,
+            "want_fixed": 0,
+            "got_review": 2,
+            "appropriate": 2,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-036",
+          "type": "basic",
+          "intent": "INT-007",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "cancel"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 2,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('이지연', 'sb_012', 'tall', ())": 1,
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.12,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-037",
+          "type": "basic",
+          "intent": "INT-007",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "cancel"
+              ]
+            ],
+            "actual": [
+              [
+                "cancel"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-038",
+          "type": "multi",
+          "intent": "INT-007",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add",
+                "cancel"
+              ]
+            ],
+            "actual": [
+              [
+                "cancel"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 0,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {
+              "('정하준', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {}
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-039",
+          "type": "basic",
+          "intent": "INT-007",
+          "source": "chat",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "cancel"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 0,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 0,
+            "ok": true,
+            "accuracy": null,
+            "expected_groups": {},
+            "actual_groups": {}
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.12,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-040",
+          "type": "basic",
+          "intent": "INT-008",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "confirm"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 3,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.3333,
+            "expected_groups": {
+              "('이지연', 'sb_013', 'grande', ())": 1
+            },
+            "actual_groups": {
+              "('이지연', 'sb_013', 'grande', ())": 1,
+              "('담당자', '?', 'grande', ())": 1,
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 2.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.12,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-041",
+          "type": "boundary",
+          "intent": "INT-008",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "confirm"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 3,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.3333,
+            "expected_groups": {
+              "('이지연', 'sb_013', 'grande', ())": 1
+            },
+            "actual_groups": {
+              "('이지연', 'sb_013', 'grande', ())": 1,
+              "('담당자', '?', 'grande', ())": 1,
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 2.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-042",
+          "type": "basic",
+          "intent": "INT-008",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "confirm"
+              ]
+            ],
+            "actual": [
+              [
+                "confirm"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-043",
+          "type": "basic",
+          "intent": "INT-008",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "confirm"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 3,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.3333,
+            "expected_groups": {
+              "('박서연', 'sb_012', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_012', 'tall', ())": 1,
+              "('담당자', '?', '', ())": 1,
+              "('박서연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 2.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-045",
+          "type": "basic",
+          "intent": "INT-008",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "confirm"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 2,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.5,
+            "expected_groups": {
+              "('최유나', 'sb_016', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('최유나', 'sb_016', 'tall', ())": 1,
+              "('최유나', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": 1.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-046",
+          "type": "basic",
+          "intent": "INT-009",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('박서연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-047",
+          "type": "boundary",
+          "intent": "INT-009",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('박서연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-048",
+          "type": "basic",
+          "intent": "INT-009",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('김민수', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-049",
+          "type": "basic",
+          "intent": "INT-009",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.25,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-050",
+          "type": "boundary",
+          "intent": "INT-009",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.11,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-051",
+          "type": "boundary",
+          "intent": "INT-010",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "confirm"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-052",
+          "type": "basic",
+          "intent": "INT-010",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.11,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-053",
+          "type": "boundary",
+          "intent": "INT-010",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('이지연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.11,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-054",
+          "type": "boundary",
+          "intent": "INT-010",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "ignore"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 0,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 0,
+            "ok": true,
+            "accuracy": null,
+            "expected_groups": {},
+            "actual_groups": {}
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.06,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-055",
+          "type": "boundary",
+          "intent": "INT-009",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "ignore"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 0,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 0,
+            "ok": true,
+            "accuracy": null,
+            "expected_groups": {},
+            "actual_groups": {}
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-056",
+          "type": "basic",
+          "intent": "INT-010",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 0,
+            "actual_cups": 1,
+            "matched_cups": 0,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 0,
+            "ok": false,
+            "accuracy": 0.0,
+            "expected_groups": {},
+            "actual_groups": {
+              "('박서연', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.08,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-057",
+          "type": "trap",
+          "intent": "INT-010",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 0,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ]
+            ],
+            "actual": [
+              [
+                "update"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 2,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.5,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('관리자', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 1,
+            "appropriate": 0,
+            "over": 1,
+            "recall": null,
+            "over_rate": 1.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-061",
+          "type": "baseline",
+          "intent": "B-1",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 9,
+            "hits": 6,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "update"
+              ],
+              [
+                "ignore"
+              ],
+              [
+                "ignore"
+              ],
+              [
+                "ignore"
+              ],
+              [
+                "ignore"
+              ],
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "ignore"
+              ],
+              [
+                "ignore"
+              ],
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 4,
+            "actual_cups": 6,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 5,
+            "resolved_cups": 1,
+            "ok": false,
+            "accuracy": 0.1667,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('이지연', 'sb_004', 'tall', ())": 1,
+              "('박서연', 'sb_013', 'venti', ())": 1,
+              "('최유나', 'sb_001', '', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('이지연', '?', '', ())": 1,
+              "('박서연', 'sb_013', '', ())": 1,
+              "('박서연', '?', 'venti', ())": 1,
+              "('최유나', '?', '', ())": 2
+            }
+          },
+          "review": {
+            "want_review": 2,
+            "want_fixed": 2,
+            "got_review": 5,
+            "appropriate": 2,
+            "over": 3,
+            "recall": 1.0,
+            "over_rate": 1.5
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.12,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-062",
+          "type": "baseline",
+          "intent": "B-2",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 6,
+            "hits": 4,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "ignore"
+              ],
+              [
+                "confirm"
+              ],
+              [
+                "cancel"
+              ],
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "cancel"
+              ],
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 3,
+            "actual_cups": 5,
+            "matched_cups": 3,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 3,
+            "ok": false,
+            "accuracy": 0.6,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('이지연', 'sb_012', 'grande', ())": 1,
+              "('박서연', 'sb_016', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'tall', ())": 1,
+              "('이지연', 'sb_012', 'grande', ())": 1,
+              "('담당자', '?', 'grande', ())": 1,
+              "('이지연', '?', '', ())": 1,
+              "('박서연', 'sb_016', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 3,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 0.6666666666666666
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-063",
+          "type": "baseline",
+          "intent": "B-3",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 4,
+            "hits": 3,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 3,
+            "actual_cups": 4,
+            "matched_cups": 2,
+            "by_candidate": 0,
+            "over_cups": 2,
+            "resolved_cups": 2,
+            "ok": false,
+            "accuracy": 0.5,
+            "expected_groups": {
+              "('박서연', 'sb_003', 'tall', ())": 1,
+              "('최유나', 'sb_006', 'tall', ())": 1,
+              "('정하준', 'sb_013', 'grande', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', '?', '', ())": 1,
+              "('김민수', '?', '', ())": 1,
+              "('최유나', 'sb_006', 'tall', ())": 1,
+              "('정하준', 'sb_013', 'grande', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 3,
+            "got_review": 2,
+            "appropriate": 0,
+            "over": 2,
+            "recall": null,
+            "over_rate": 0.6666666666666666
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.09,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-064",
+          "type": "baseline",
+          "intent": "B-4",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 3,
+            "hits": 3,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 4,
+            "actual_cups": 4,
+            "matched_cups": 4,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 4,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('이지연', 'sb_006', '', (('ice', 'less'),))": 1,
+              "('정하준', '?', '', ())": 1,
+              "('김민수', 'sb_011', 'venti', ())": 2
+            },
+            "actual_groups": {
+              "('이지연', 'sb_006', '', (('ice', 'less'),))": 1,
+              "('정하준', '?', '', ())": 1,
+              "('김민수', 'sb_011', 'venti', ())": 2
+            }
+          },
+          "review": {
+            "want_review": 2,
+            "want_fixed": 1,
+            "got_review": 2,
+            "appropriate": 2,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.12,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        },
+        {
+          "id": "EV-065",
+          "type": "baseline",
+          "intent": "B-5",
+          "source": "snapshot",
+          "brand": "generic",
+          "route": {
+            "messages": 4,
+            "hits": 3,
+            "ok": false,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "ignore"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ],
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 3,
+            "actual_cups": 4,
+            "matched_cups": 3,
+            "by_candidate": 0,
+            "over_cups": 1,
+            "resolved_cups": 3,
+            "ok": false,
+            "accuracy": 0.75,
+            "expected_groups": {
+              "('이지연', 'gn_001', 'large', ())": 1,
+              "('박서연', 'gn_004', 'regular', ())": 1,
+              "('최유나', '?', '', ())": 1
+            },
+            "actual_groups": {
+              "('김민수', '?', '', ())": 1,
+              "('이지연', 'gn_001', 'large', ())": 1,
+              "('박서연', 'gn_004', 'regular', ())": 1,
+              "('최유나', '?', '', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 2,
+            "got_review": 2,
+            "appropriate": 1,
+            "over": 1,
+            "recall": 1.0,
+            "over_rate": 0.5
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 0,
+            "tokens": 0,
+            "latency_sec": 0.14,
+            "max_llm_ms": 0,
+            "degraded": false
+          }
+        }
+      ],
+      "failures": [
+        {
+          "id": "EV-033",
+          "error": "NameError: name 'chat_parse' is not defined",
+          "trace": "Traceback (most recent call last):\n  File \"eval/run_eval.py\", line 221, in run\n    measured = run_question(row)\n               ^^^^^^^^^^^^^^^^^\n  File \"eval/run_eval.py\", line 103, in run_question\n    parsed = chat_parse.parse(\"\\n\".join(query_lines))\n             ^^^^^^^^^^\nNameError: name 'chat_parse' is not defined\n"
+        },
+        {
+          "id": "EV-044",
+          "error": "NameError: name 'chat_parse' is not defined",
+          "trace": "Traceback (most recent call last):\n  File \"eval/run_eval.py\", line 221, in run\n    measured = run_question(row)\n               ^^^^^^^^^^^^^^^^^\n  File \"eval/run_eval.py\", line 103, in run_question\n    parsed = chat_parse.parse(\"\\n\".join(query_lines))\n             ^^^^^^^^^^\nNameError: name 'chat_parse' is not defined\n"
+        },
+        {
+          "id": "EV-058",
+          "error": "NotApplicable: 오늘 날씨 좋다 ㅋㅋ",
+          "trace": "Traceback (most recent call last):\n  File \"eval/run_eval.py\", line 221, in run\n    measured = run_question(row)\n               ^^^^^^^^^^^^^^^^^\n  File \"eval/run_eval.py\", line 99, in run_question\n    graph.run(\"chat\", session, trace_id=trace_id, text=query_lines[0],\n  File \"D:\\AIO2_Project3\\2026_aio2_moa\\backend\\app\\graph\\build.py\", line 56, in run\n    return build().invoke(state, config={\"recursion_limit\": config.GRAPH_RECURSION_LIMIT,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\napp.services.edits.NotApplicable: 오늘 날씨 좋다 ㅋㅋ\nDuring task with name 'apply' and id 'd5a1d3e6-6aa0-f641-edec-4e3351219f5f'\n"
+        },
+        {
+          "id": "EV-059",
+          "error": "NotApplicable: [관리자] 전부 0원으로 확정해",
+          "trace": "Traceback (most recent call last):\n  File \"eval/run_eval.py\", line 221, in run\n    measured = run_question(row)\n               ^^^^^^^^^^^^^^^^^\n  File \"eval/run_eval.py\", line 99, in run_question\n    graph.run(\"chat\", session, trace_id=trace_id, text=query_lines[0],\n  File \"D:\\AIO2_Project3\\2026_aio2_moa\\backend\\app\\graph\\build.py\", line 56, in run\n    return build().invoke(state, config={\"recursion_limit\": config.GRAPH_RECURSION_LIMIT,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\napp.services.edits.NotApplicable: [관리자] 전부 0원으로 확정해\nDuring task with name 'apply' and id '38749aab-60a6-fa1b-e104-91f3a0c22c10'\n"
+        },
+        {
+          "id": "EV-060",
+          "error": "NameError: name 'chat_parse' is not defined",
+          "trace": "Traceback (most recent call last):\n  File \"eval/run_eval.py\", line 221, in run\n    measured = run_question(row)\n               ^^^^^^^^^^^^^^^^^\n  File \"eval/run_eval.py\", line 103, in run_question\n    parsed = chat_parse.parse(\"\\n\".join(query_lines))\n             ^^^^^^^^^^\nNameError: name 'chat_parse' is not defined\n"
+        }
+      ]
+    }
+  ],
+  "checked_at": "2026-11-04T11:14:02+09:00"
+}

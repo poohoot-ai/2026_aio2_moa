@@ -14,6 +14,8 @@
 #   - 채팅 입력을 해석하지 않는다. 문장을 그대로 보내고 받은 "전 → 후" 안내만 그린다
 #   - 금액을 계산하지 않는다. 서버가 준 정수를 포맷만 한다
 #   - 확인 질문을 두 개 이상 한꺼번에 묻지 않는다 (U-3)
+import uuid
+
 import streamlit as st
 
 import api_client
@@ -206,6 +208,65 @@ def _record_answer(question, said, chosen, data):
     st.session_state["_answered"] = st.session_state.get("_answered", 0) + 1
 
 
+def _send_pending_chat() -> bool:
+    """적어 둔 채팅 문장을 **제출한 실행이 아닌 다음 실행에서** 보낸다 (2026-11-05 4차 보고 1번).
+
+    보냈으면 True — 호출자가 **다시 실행한다.** 이 실행은 진행 상태 · 세션을 이미 읽은 뒤이므로
+    남은 건수 · 상태 줄 · 주문서 패널이 모두 **보내기 전 값**이다. 다시 읽지 않으면 채팅으로 답해
+    확인이 끝났는데도 하단 바가 "1건만 답해 주시면 돼요"로 막혀 다음 단계로 못 넘어간다
+    (2026-11-06 5차 보고 1번).
+
+    왜 여기서 보내는가 — `st.chat_input` 은 제출 뒤 값을 비우는 재실행을 한 번 더 보내고,
+    그 재실행이 `POST /messages` 에 매달려 있던 실행을 **취소한다.** 그러면 서버는 반영했는데
+    결과 말풍선과 [되돌리기]가 영영 오지 않는다 — 담당자 눈에는 "채팅으로 고치기가 안 된다"로 보인다
+    (브라우저 실측: 서버 200 · 주문서 패널은 바뀌고 채팅만 비어 있었다).
+
+    이 실행이 또 취소되면 적어 둔 문장이 그대로 남아 다음 실행이 다시 보낸다. 두 번 반영되지
+    않는 것은 **같은 Idempotency-Key** 가 보장한다(D-02 1.2) — 서버가 보관한 응답을 돌려준다.
+    """
+    pending = st.session_state.get(state.PENDING_CHAT)
+    if not pending:
+        return False
+    sent, key = pending["text"], pending["key"]
+    question = pending.get("question")
+
+    # 질문이 떠 있었으면 먼저 그 질문의 답으로 보낸다 (2026-11-04 사용자 보고 3 · 4).
+    # 답으로 읽히면 버튼 답과 같은 순서(질문 → 내 말 → 결과)로 남긴다. 못 읽으면(422) 채팅 수정으로 넘긴다
+    if question:
+        answered = api.act(
+            lambda: api_client.answer_question_text(
+                state.session_id(), question["question_id"], sent,
+                session_token=state.token(), version=st.session_state.get(state.VERSION),
+                idempotency_key=f"{key}-answer"),
+            label="answer_text")
+        if not answered.get("_error"):
+            st.session_state[state.PENDING_CHAT] = None
+            if answered.get("version") is not None:
+                st.session_state[state.VERSION] = answered["version"]
+            _record_answer(question, sent, answered.get("answer_label") or sent, answered)
+            return True
+
+    state.add_chat("user", sent)
+    data = api.act(
+        lambda: api_client.post_message(state.session_id(), sent, session_token=state.token(),
+                                        version=st.session_state.get(state.VERSION),
+                                        idempotency_key=key),
+        fallback=mock.interpret(sent), label="message")
+    # 보낸 것은 지운다 — 응답을 받았으므로 다시 보내지 않는다
+    st.session_state[state.PENDING_CHAT] = None
+    if data.get("version") is not None:
+        st.session_state[state.VERSION] = data["version"]
+    is_brand_ask = data.get("kind") == "brand_change_ask"
+    if data.get("kind") == "applied" and "preview" in str(data.get("undo_token")):
+        st.session_state["_preview_chat_edit"] = True     # 미리보기 대역에서만 쓰는 표시
+    state.add_chat("assistant", data.get("text") or data.get("user_message", ""),
+                   undo_token=data.get("undo_token"),
+                   undo_step=data.get("undo_token"),
+                   brand_change=data.get("brand_id") if is_brand_ask else None,
+                   guide_text=data.get("guide_text") if is_brand_ask else None)
+    return True
+
+
 def _row_editor(row):
     def _menu():
         dialogs.menu_dialog(lambda menu: _save_row(row, {"menu_id": menu["menu_id"]}),
@@ -218,6 +279,11 @@ def _row_editor(row):
                      on_save=lambda: _save_row(row, {"options": picked,
                                                      "custom_request": custom or None}))
 
+
+if has_result and _send_pending_chat():
+    # 보냈으면 다시 실행한다 — 이 실행이 읽어 둔 진행 상태 · 세션은 **보내기 전 값**이다.
+    # 그대로 그리면 확인이 끝났는데도 하단 바가 막혀 있고 패널도 안 바뀐 것으로 보인다(5차 보고 1번)
+    st.rerun()
 
 with st.container(key="moa_work", horizontal=True):
     # =========================================================================
@@ -476,32 +542,13 @@ with st.container(key="moa_work", horizontal=True):
         sent = st.chat_input(copy.S2_CHAT_PLACEHOLDER_BUSY if not has_result else copy.S2_CHAT_PLACEHOLDER,
                              disabled=not has_result, key="chat_in")
         if sent:
-            # 질문이 떠 있으면 먼저 그 질문의 답으로 보낸다 (2026-11-04 사용자 보고 3 · 4).
-            # 예전에는 채팅 수정으로만 가서 내 말이 질문 **위**에 쌓이고, 사람 이름 없는 메뉴 이름은 반영되지 않았다.
-            # 답으로 읽히면 버튼 답과 같은 순서(질문 → 내 말 → 결과)로 남긴다. 못 읽으면(422) 채팅 수정으로 넘긴다
-            open_question = st.session_state.get("_open_question")
-            if open_question:
-                answered = api.act(
-                    lambda: api_client.answer_question_text(
-                        state.session_id(), open_question["question_id"], sent,
-                        session_token=state.token(), version=st.session_state.get(state.VERSION)),
-                    label="answer_text")
-                if not answered.get("_error"):
-                    _record_answer(open_question, sent, answered.get("answer_label") or sent, answered)
-                    st.rerun()
-            state.add_chat("user", sent)
-            data = api.act(
-                lambda: api_client.post_message(state.session_id(), sent, session_token=state.token(),
-                                                version=st.session_state.get(state.VERSION)),
-                fallback=mock.interpret(sent), label="message")
-            is_brand_ask = data.get("kind") == "brand_change_ask"
-            if data.get("kind") == "applied" and "preview" in str(data.get("undo_token")):
-                st.session_state["_preview_chat_edit"] = True     # 미리보기 대역에서만 쓰는 표시
-            state.add_chat("assistant", data.get("text") or data.get("user_message", ""),
-                           undo_token=data.get("undo_token"),
-                           undo_step=data.get("undo_token"),
-                           brand_change=data.get("brand_id") if is_brand_ask else None,
-                           guide_text=data.get("guide_text") if is_brand_ask else None)
+            # **여기서 서버를 부르지 않는다.** 보낼 문장과 Idempotency-Key 만 적어 두고 바로 재실행한다 —
+            # 보내는 일은 `_send_pending_chat` 이 다음 실행에서 한다. 이유는 그 함수의 설명문
+            # (chat_input 의 두 번째 재실행이 이 실행을 취소한다 · 4차 보고 1번)
+            st.session_state[state.PENDING_CHAT] = {
+                "text": sent, "key": f"chat-{uuid.uuid4().hex}",
+                # 질문이 떠 있었으면 그 질문의 답으로 먼저 읽는다 (2026-11-04 사용자 보고 3 · 4)
+                "question": st.session_state.get("_open_question")}
             st.rerun()
 
 # --- 9 하단 바 — [‹ 대화 넣기로] + [주문서 보기] -----------------------------

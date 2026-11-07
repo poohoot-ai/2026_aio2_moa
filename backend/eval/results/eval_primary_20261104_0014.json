@@ -1,0 +1,231 @@
+{
+  "condition": "primary",
+  "model": "gpt-5.4-mini-2026-03-17",
+  "questions_in_run": 3,
+  "runs": [
+    {
+      "attempt": 1,
+      "summary": {
+        "questions": 3,
+        "axis1_route_accuracy": 1.0,
+        "axis1_question_level": 1.0,
+        "axis2_items_accuracy": 1.0,
+        "axis3_review_recall": 1.0,
+        "axis4_over_review_rate": 0.0,
+        "axis6_evidence_accuracy": null,
+        "axis7_llm_calls": 3,
+        "axis7_max_latency_sec": 21.55,
+        "axis7_degraded_questions": 0,
+        "axis5_evidence_fidelity": 1.0
+      },
+      "questions": [
+        {
+          "id": "EV-001",
+          "type": "basic",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 1
+            },
+            "actual_groups": {
+              "('박서연', 'sb_004', 'tall', ())": 1
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 1,
+            "tokens": 3568,
+            "latency_sec": 21.55,
+            "max_llm_ms": 3155,
+            "degraded": false
+          },
+          "judge": {
+            "items": [
+              {
+                "item_ref": "1",
+                "reason": "대화에서 박서연이 \"아아 톨 한 잔이요\"라고 주문했고, 메뉴판에 아이스 아메리카노의 기본 사이즈가 tall(톨)로 표시되어 있다. 수량도 1잔으로 일치한다.",
+                "verdict": "supported"
+              }
+            ],
+            "score": 1.0,
+            "invalid_verdicts": 0,
+            "llm_calls": 1
+          }
+        },
+        {
+          "id": "EV-002",
+          "type": "basic",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 2,
+            "actual_cups": 2,
+            "matched_cups": 2,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 2,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('김민수', 'sb_004', 'grande', ())": 2
+            },
+            "actual_groups": {
+              "('김민수', 'sb_004', 'grande', ())": 2
+            }
+          },
+          "review": {
+            "want_review": 0,
+            "want_fixed": 1,
+            "got_review": 0,
+            "appropriate": 0,
+            "over": 0,
+            "recall": null,
+            "over_rate": 0.0
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 1,
+            "tokens": 3575,
+            "latency_sec": 15.44,
+            "max_llm_ms": 2105,
+            "degraded": false
+          },
+          "judge": {
+            "items": [
+              {
+                "item_ref": "1",
+                "reason": "대화에서 김민수가 \"아이스 아메리카노 그란데 2잔이요\"라고 말했고, 메뉴판에 아이스 아메리카노와 size grande(그란데)가 있으며 수량도 2잔으로 일치한다.",
+                "verdict": "supported"
+              }
+            ],
+            "score": 1.0,
+            "invalid_verdicts": 0,
+            "llm_calls": 1
+          }
+        },
+        {
+          "id": "EV-003",
+          "type": "trap",
+          "intent": "INT-001",
+          "source": "snapshot",
+          "brand": "starbucks",
+          "route": {
+            "messages": 1,
+            "hits": 1,
+            "ok": true,
+            "length_mismatch": false,
+            "expected": [
+              [
+                "add"
+              ]
+            ],
+            "actual": [
+              [
+                "add"
+              ]
+            ]
+          },
+          "items": {
+            "expected_cups": 1,
+            "actual_cups": 1,
+            "matched_cups": 1,
+            "by_candidate": 0,
+            "over_cups": 0,
+            "resolved_cups": 1,
+            "ok": true,
+            "accuracy": 1.0,
+            "expected_groups": {
+              "('이지연', 'sb_006', '', (('ice', 'less'),))": 1
+            },
+            "actual_groups": {
+              "('이지연', 'sb_006', '', (('ice', 'less'),))": 1
+            }
+          },
+          "review": {
+            "want_review": 1,
+            "want_fixed": 0,
+            "got_review": 1,
+            "appropriate": 1,
+            "over": 0,
+            "recall": 1.0,
+            "over_rate": null
+          },
+          "evidence_ok": null,
+          "cost": {
+            "llm_calls": 1,
+            "tokens": 3575,
+            "latency_sec": 15.84,
+            "max_llm_ms": 1661,
+            "degraded": false
+          },
+          "judge": {
+            "items": [
+              {
+                "item_ref": "1",
+                "reason": "대화에서 이지연이 \"바닐라라떼 큰 거 얼음 적게요\"라고 말해 아이스 바닐라라떼와 얼음 적게(ice=less)는 확인된다. 메뉴판상 사이즈 기본값은 톨이지만, 대화의 \"큰 거\"는 그란데/벤티 중 하나로 해석될 수 있어 주문서의 \"사이즈 미정\"은 대화와 모순되지 않는다. 수량도 1잔으로 대화에 반하지 않는다.",
+                "verdict": "supported"
+              }
+            ],
+            "score": 1.0,
+            "invalid_verdicts": 0,
+            "llm_calls": 1
+          }
+        }
+      ],
+      "failures": []
+    }
+  ],
+  "checked_at": "2026-11-04T00:14:35+09:00"
+}

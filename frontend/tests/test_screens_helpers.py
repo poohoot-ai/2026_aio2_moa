@@ -126,8 +126,8 @@ def test_manager_facing_texts_have_no_internal_terms():
 
 def test_fault_codes_live_only_in_ops_responses():
     codes = [i["fault_code"] for i in mock.OPS_INCIDENTS["incidents"]]
-    assert "DEP_TIMEOUT" in codes       # 운영자는 본다
-    assert "DEP_TIMEOUT" not in mock.share_text()["content"]
+    assert "DB_UNAVAILABLE" in codes    # 운영자는 본다
+    assert "DB_UNAVAILABLE" not in mock.share_text()["content"]
 
 
 # --- 정본 시안 대조 — 눈으로 보지 않아도 어긋나면 걸리게 ---------------------
@@ -298,9 +298,9 @@ def test_option_change_sends_group_key_and_internal_value():
 def test_preview_share_without_names_drops_only_name_rows():
     from moa import dialogs
 
-    share = {"content": "커피 주문\n\n아아  x2\n  김민수 · 박서연\n  요청: 빨대 빼기\n\n합계 2잔",
+    share = {"content": "[스타벅스 주문 정리]\n\n1. 아아 × 2잔\n주문자: 김민수, 박서연\n-빨대 제외\n\n총 2명 · 2잔",
              "card": {"lines": [{"menu_text": "아아", "quantity": 2, "people": ["김민수", "박서연"],
                                  "custom_request": "빨대 빼기"}]}}
     out = dialogs._without_names(share)
-    assert "김민수" not in out["content"] and "요청: 빨대 빼기" in out["content"] and "아아  x2" in out["content"]
+    assert "김민수" not in out["content"] and "-빨대 제외" in out["content"] and "1. 아아 × 2잔" in out["content"]
     assert out["card"]["lines"][0]["people"] == []

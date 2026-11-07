@@ -131,13 +131,14 @@ def test_intake_uses_llm_route(interpreter):
     assert out["llm_calls"] == 1 and not out.get("degraded")
 
 
-def test_intake_regenerates_twice_then_falls_back_to_rules(interpreter):
+def test_intake_regenerates_twice_then_marks_invalid_output_for_review(interpreter):
     bad = interpreter_client.InterpreterError("AGENT_OUTPUT_INVALID", "x", service="primary")
     interpreter.extend([bad, bad, bad])
     out = nodes.intake_node(_batch(msgs(1)))
     assert out["llm_calls"] == 3                                           # 1 + 재생성 2
     assert out["degraded"][0]["reason"] == "regenerate_exhausted"
-    assert out["events"][0]["event_type"] == "add"                         # 규칙 해석으로 대체
+    assert out["events"][0]["event_type"] == "ignore"                      # 미검증 출력은 주문으로 확정하지 않는다
+    assert out["degraded"][0]["needs_review"] is True
 
 
 def test_missing_event_is_filled_by_rules_without_regenerating(interpreter):
@@ -444,3 +445,31 @@ def test_menu_send_carries_trace_id_and_service():
     sends = nodes.route_edge({"source": "snapshot", "session": SESSION, "trace_id": "tr_X", "service": "primary",
                               "targets": {"ordered": events}})
     assert sends[0].arg["trace_id"] == "tr_X" and sends[0].arg["service"] == "primary" and sends[0].arg["agent_ok"]
+
+
+# --- 킬 스위치도 냉각을 본다 (PRD 5.6 F-4) ----------------------------------------------------
+# 실측 결함 2026-11-06: `_pick_service` 가 usable=("up","degraded") 만 보고 cooldown_until 을
+# 무시해, 1차가 circuit_open 이면 **냉각이 지난 뒤에도** 대체로만 갔다. 그래서 1차에 시험 요청이
+# 가지 않아 회로가 영구히 닫히지 않았다(회로를 닫는 다른 길은 healing 의 F-4 probe 뿐이다).
+# 회로 해석을 interpreter_client.circuit_usable 한 곳으로 모아 두 층이 같은 규칙을 쓰게 한다.
+@pytest.mark.parametrize("state,cooldown_sec,picked", [
+    ("up", None, "primary"),
+    ("degraded", None, "primary"),
+    ("circuit_open", 30, "backup"),      # 냉각 중 — 대체로 간다
+    ("circuit_open", -1, "primary"),     # 냉각이 지났다 — 1차에 시험 요청 1회
+    ("down", None, "backup"),
+    ("probing", None, "backup"),         # healing 이 시험 중 — 업무 층은 끼어들지 않는다
+])
+def test_pick_service_sends_one_trial_to_primary_after_cooldown(monkeypatch, state, cooldown_sec, picked):
+    import datetime as _dt
+
+    cooldown = (None if cooldown_sec is None else
+                _dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(seconds=cooldown_sec))
+    monkeypatch.setattr(config, "ORDER_INTERPRETER_PRIMARY_URL", "http://primary")
+    monkeypatch.setattr(config, "ORDER_INTERPRETER_BACKUP_URL", "http://backup")
+    monkeypatch.setattr(config, "db_configured", lambda: True)
+    monkeypatch.setattr(nodes.db, "fetch_all", lambda *a, **k: [
+        {"dependency_key": "order_interpreter_primary", "state": state, "cooldown_until": cooldown},
+        {"dependency_key": "order_interpreter_backup", "state": "up", "cooldown_until": None},
+    ])
+    assert nodes._pick_service() == picked

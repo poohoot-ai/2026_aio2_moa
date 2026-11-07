@@ -7,6 +7,7 @@
 """
 
 import datetime
+import re
 
 from app.services import share_image
 from app.services.chat_parse import UNNAMED
@@ -21,16 +22,98 @@ IMAGE_UNAVAILABLE_TEXT = "이미지는 아직 만들지 못했어요. 텍스트 
 
 
 def _spec_text(group: dict) -> str:
-    """메뉴명 뒤에 붙는 사양 — 옵션 칩을 한 줄로 합친다."""
-    parts = []
+    """메뉴명 뒤에 붙는 사양 — 카드 · 이미지용 한 줄. 복사 텍스트와 **같은 옵션 규칙**(_split_options)을 쓴다:
+    기본값은 빼고 "샷 샷 추가"처럼 겹치지 않는다(2026-11-06)."""
+    size, extras = _split_options(group)
+    return " ".join(([size] if size else []) + extras)
+
+
+def _split_options(group: dict) -> tuple[str | None, list[str]]:
+    """옵션 칩을 (사이즈, 나머지 옵션 문구 목록)으로 나눈다."""
+    size, extras = None, []
     for option in group.get("options") or []:
         value = option.get("value")
         if not value:
             continue
         label = option.get("label")
-        # 사이즈는 값만, 나머지는 "얼음 적게"처럼 라벨을 붙인다
-        parts.append(value if label == "사이즈" else f"{label} {value}")
-    return " ".join(parts)
+        if label == "사이즈":
+            size = value
+        elif (label, value) in _DEFAULT_OPTION_TEXT:
+            continue
+        elif not label or label == "우유" or label in value:
+            # "샷 추가" · "시럽 추가" · "두유"처럼 값만으로 읽힌다 — "샷 샷 추가"가 되지 않게
+            extras.append(value)
+        else:
+            extras.append(f"{label} {value}")
+    return size, extras
+
+
+# 기본값은 주문하는 쪽에 알릴 말이 아니다 — "얼음 보통 · 개인컵 미사용"이 줄마다 쌓이지 않게 텍스트에서 뺀다
+_DEFAULT_OPTION_TEXT = {("얼음", "보통"), ("샷", "기본"), ("원두", "시그니처"), ("개인컵", "미사용"),
+                        ("시럽", "없음"), ("우유", "일반 우유")}
+
+
+# 기타 요청을 단톡방용 짧은 문구로 줄이는 규칙. **확실할 때만 줄이고 아니면 원문 구절 그대로 둔다** —
+# 잘못 줄이면 매장에 다른 주문이 들어간다. 요청 원문은 고치지 않는다(DB · 주문서는 그대로)
+# 구절 나누기: 쉼표 · 세미콜론 · 줄바꿈 · 문장 끝 마침표(숫자 사이 "1.5" 는 자르지 않는다)
+_CLAUSE_SPLIT = re.compile(r"\s*(?:[,，;\n]|(?<!\d)[.。](?!\d))\s*")
+# 한 구절 안의 "~주시고 ~" — 나눈 조각이 **전부** 규칙에 맞을 때만 나눈다("빨대 주시고 …"가 "빨대"로 남지 않게)
+_CONNECTIVE_SPLIT = re.compile(r"\s*(?:해\s?주시고|주시고|하시고|해\s?주고)\s+")
+_TOPICS = ("빨대", "휘핑", "얼음", "텀블러", "개인컵", "개인 컵")
+_NEGATED_CUP = re.compile(r"안\s*가져|없어|못\s*가져|안\s*써|안\s*쓰|미사용|말고")
+_SHORT_RULES = [
+    (re.compile(r"빨대\S*\s*(?:는|은)?\s*(?:빼|없이|제외|필요\s*없|안\s*주|주지\s*마)"), "빨대 제외"),
+    (re.compile(r"휘핑\S*\s*(?:는|은)?\s*(?:빼|없이|제외|필요\s*없)"), "휘핑 제외"),
+    (re.compile(r"얼음\S*\s*(?:은|는)?\s*(?:컵\s*)?(?:반만|절반|반\s*정도)"), "얼음 절반만"),
+    (re.compile(r"텀블러|개인\s?컵"), "개인컵 사용"),
+]
+
+
+def _shorten(clause: str) -> str | None:
+    """구절 하나를 짧은 문구로. 확실하지 않으면 None — 주제어가 둘 이상이거나 부정이 섞이면 줄이지 않는다."""
+    if sum(word in clause for word in _TOPICS if word != "개인 컵") != 1:
+        return None
+    for pattern, short in _SHORT_RULES:
+        if pattern.search(clause):
+            if short == "개인컵 사용" and _NEGATED_CUP.search(clause):
+                return None
+            return short
+    return None
+
+
+def _request_lines(custom_request: str | None) -> list[str]:
+    out = []
+    for clause in _CLAUSE_SPLIT.split(custom_request or ""):
+        clause = clause.strip()
+        if not clause:
+            continue
+        parts = [p for p in _CONNECTIVE_SPLIT.split(clause) if p.strip()]
+        shorts = [_shorten(p) for p in parts]
+        if len(parts) > 1 and all(shorts):
+            out += shorts
+        else:
+            out.append(_shorten(clause) or clause)
+    return out
+
+
+def _details(extras: list[str], custom_request: str | None) -> list[str]:
+    """`-` 줄로 붙일 항목 — 사이즈 외 옵션 + 기타 요청 구절. 같은 말은 한 번만."""
+    out: list[str] = []
+    for text in extras + _request_lines(custom_request):
+        text = text.strip()
+        if text and text not in out:
+            out.append(text)
+    return out
+
+
+def _compact_people(people: list[str]) -> list[str]:
+    """주문자 목록 — 이름 없는 참여자는 "이름 없음, 이름 없음"으로 늘어놓지 않고 "이름 없음 2명"으로 묶는다.
+    카드 · 이미지 · 복사 텍스트가 같이 쓴다."""
+    named = [p for p in people if p and p != UNNAMED]
+    unnamed = len(people) - len(named)
+    if unnamed:
+        named.append(f"{UNNAMED} {unnamed}명" if unnamed > 1 else UNNAMED)
+    return named
 
 
 def build_card(sheet: dict, *, now: datetime.datetime | None = None, show_names: bool = True) -> dict:
@@ -43,7 +126,9 @@ def build_card(sheet: dict, *, now: datetime.datetime | None = None, show_names:
     "이름 없음 · 이름 없음"을 단톡방에 올리는 것은 이름 표시가 아니다(2026-11-05 사용자 결정 1번).
     """
     now = now or _now_kst()
-    if show_names and not _has_real_names(sheet):
+    # 이름이 하나도 없는 대화는 몇 명인지 모른다 — 인원을 말하지 않고 잔 수만 쓴다(projection.chat_intro 와 같은 결정)
+    nameless = not _has_real_names(sheet)
+    if show_names and nameless:
         show_names = False
     brand_head = BRAND_HEAD.get(sheet["brand"]["id"], "카페")
     summary = sheet["summary"]
@@ -52,10 +137,15 @@ def build_card(sheet: dict, *, now: datetime.datetime | None = None, show_names:
     lines = []
     for group in sheet["groups"]:
         spec = _spec_text(group)
+        size, extras = _split_options(group)
         lines.append({
             "menu_text": f'{group["menu_text"]} {spec}'.strip(),
+            # 복사 텍스트용 — 메뉴명 · 사이즈 · 나머지 옵션 · 요청을 따로 둔다(2026-11-06 사용자 요청)
+            "menu_name": group["menu_text"],
+            "size": size,
+            "details": _details(extras, group.get("custom_request")),
             "quantity": group["quantity"],
-            "people": group["people"] if show_names else [],
+            "people": _compact_people(group["people"]) if show_names else [],
             "custom_request": group["custom_request"],
         })
 
@@ -64,10 +154,12 @@ def build_card(sheet: dict, *, now: datetime.datetime | None = None, show_names:
                   else f'합계 {totals["cups"]}잔 · 예상 {totals["estimated_total"]:,}원')
 
     return {
+        "brand_head": brand_head,
+        "people_count": None if nameless else summary["people"],
+        "cups": summary["cups"],
+        "estimated_total": totals["estimated_total"],
         "head": f"커피 주문 · {brand_head}",
-        "sub": f'{now:%-m/%-d %H:%M} 기준 · {summary["people"]}명 · {summary["cups"]}잔'
-               if _supports_dash() else
-               f'{now.month}/{now.day} {now:%H:%M} 기준 · {summary["people"]}명 · {summary["cups"]}잔',
+        "sub": f'{now.month}/{now.day} {now:%H:%M} 기준 · {_count_text(None if nameless else summary["people"], summary["cups"])}',
         "lines": lines,
         "total_text": total_text,
         "notice": NOTICE,
@@ -91,25 +183,30 @@ def _now_kst() -> datetime.datetime:
     return datetime.datetime.now(KST)
 
 
-def _supports_dash() -> bool:
-    """`%-m` 은 플랫폼에 따라 없다 — 윈도우에서 터지는 자리라 미리 가른다."""
-    try:
-        datetime.datetime.now().strftime("%-m")
-        return True
-    except ValueError:
-        return False
+def _count_text(people: int | None, cups: int) -> str:
+    return f"{cups}잔" if people is None else f"{people}명 · {cups}잔"
+
+
+TEXT_NOTICE = "※ 금액은 참고용이며 실제 결제 금액과 다를 수 있습니다."
 
 
 def render_text(card: dict) -> str:
-    """복사용 텍스트. 공유 카드와 같은 내용이어야 한다."""
-    out = [card["head"], card["sub"], ""]
-    for line in card["lines"]:
-        out.append(f'{line["menu_text"]}  x{line["quantity"]}')
+    """복사용 텍스트. 공유 카드와 같은 자료에서 만들고, 단톡방에 붙여 읽기 좋은 번호 목록으로 쓴다
+    (2026-11-06 사용자 요청 — 메뉴 · 사이즈 · 주문자 · 요청을 줄로 나눈다)."""
+    count = _count_text(card["people_count"], card["cups"])
+    total = card["estimated_total"]
+    out = [f'[{card["brand_head"]} 주문 정리]', "", f"주문 현황: {count}"]
+    if total is not None:
+        out.append(f"예상 결제 금액: {total:,}원")
+    for index, line in enumerate(card["lines"], start=1):
+        size = f' ({line["size"]})' if line.get("size") else ""
+        out += ["", f'{index}. {line["menu_name"]}{size} × {line["quantity"]}잔']
         if line["people"]:
-            out.append("  " + " · ".join(line["people"]))
-        if line["custom_request"]:
-            out.append(f'  요청: {line["custom_request"]}')
-    out += ["", card["total_text"], card["notice"], card["foot"]]
+            out.append("주문자: " + ", ".join(line["people"]))
+        out += [f"-{detail}" for detail in line["details"]]
+    out += ["", f"총 {count}" + (f" | 예상 {total:,}원" if total is not None else "")]
+    if total is not None:
+        out += ["", TEXT_NOTICE]
     return "\n".join(out)
 
 

@@ -183,23 +183,31 @@ def answer_question(session_id, question_id, answer, *, session_token=None, vers
                    session_token=session_token, version=version, json={"answer": answer})
 
 
-def answer_question_text(session_id, question_id, text, *, session_token=None, version=None, client=None):
+def answer_question_text(session_id, question_id, text, *, session_token=None, version=None,
+                         idempotency_key=None, client=None):
     """API-021 (text) — 질문이 열려 있을 때 채팅으로 친 문장을 답으로 보낸다. 해석은 서버가 한다.
 
     서버가 답으로 읽지 못하면 422(NOT_APPLICABLE) — 화면은 그때 채팅 수정(API-022)으로 넘긴다.
     """
     return request("POST", f"/api/sessions/{session_id}/questions/{question_id}/answer", client=client,
-                   session_token=session_token, version=version, json={"text": text})
+                   session_token=session_token, version=version,
+                   idempotency_key=idempotency_key, json={"text": text})
 
 
-def post_message(session_id, text, *, session_token=None, version=None, client=None):
+def post_message(session_id, text, *, session_token=None, version=None, idempotency_key=None,
+                 client=None):
     """API-022 — 채팅 입력 해석. 입력 문장을 그대로 보낸다.
 
     해석은 서버가 한다 — 화면은 받은 "전 → 후" 안내와 되돌리기 토큰만 표시한다
     (P-06 프론트엔드 원칙).
+
+    `idempotency_key` 를 받는다 — 채팅 입력은 **한 번 보낸 것을 다시 보낼 수 있다.**
+    `st.chat_input` 이 값을 비우는 재실행으로 보내던 실행이 취소되면 다음 실행이 다시 걸고,
+    키가 같으면 서버가 보관한 응답을 돌려주므로 주문이 두 번 바뀌지 않는다 (D-02 1.2 · 4차 보고 1번).
     """
     return request("POST", f"/api/sessions/{session_id}/messages", client=client,
-                   session_token=session_token, version=version, json={"text": text})
+                   session_token=session_token, version=version,
+                   idempotency_key=idempotency_key, json={"text": text})
 
 
 def patch_item(session_id, item_id, changes, *, session_token=None, version=None, client=None):
@@ -330,6 +338,16 @@ def ops_metrics(*, ops_token=None, client=None):
     return request("GET", "/api/ops/metrics", client=client, ops_token=ops_token)
 
 
+def ops_trials(*, ops_token=None, client=None):
+    """장애 시험 결과(블록 D · F-1 ~ F-6 × 회차) — 고도화안 G-3 · G-4. 서버 미구현 구간이다.
+
+    응답 모양: `{"total_runs": 25, "rows": [{"fault": "F-1", "cells": [{"result": "auto", "sec": 41}, ...]}],
+    "f4": {"cells": [{"result": "switched"}, ...]}}` — result 는 auto · approved · failed · invalid ·
+    running · pending (F-4 는 switched · not_switched · pending).
+    """
+    return request("GET", "/api/ops/trials", client=client, ops_token=ops_token)
+
+
 def ops_orders(*, ops_token=None, limit=50, client=None):
     """API-047 — 주문 처리 기록 목록(O-6)."""
     return request("GET", "/api/ops/orders", client=client, ops_token=ops_token, params={"limit": limit})
@@ -344,3 +362,40 @@ def ops_fault(code, action="inject", *, ops_token=None, client=None):
     """API-049 — 장애 주입 · 해제(F-1 ~ F-6 · 실습 전용)."""
     return request("POST", "/api/ops/faults", client=client, ops_token=ops_token,
                    json={"code": code, "action": action})
+
+
+def ops_workflow_preflight(*, mode="quick", fault_type="F-1", target=None, ops_token=None, client=None):
+    return request("POST", "/api/ops/workflows/preflight", client=client, ops_token=ops_token,
+                   json={"mode": mode, "fault_type": fault_type, "target": target})
+
+
+def ops_workflow_create(*, mode="quick", fault_type="F-1", target=None, repetitions=1,
+                        injection_seconds=1, idempotency_key=None, ops_token=None, client=None):
+    return request("POST", "/api/ops/workflows", client=client, ops_token=ops_token,
+                   idempotency_key=idempotency_key,
+                   json={"mode": mode, "fault_type": fault_type, "target": target,
+                         "repetitions": repetitions, "injection_seconds": injection_seconds})
+
+
+def ops_workflows(*, ops_token=None, client=None):
+    return request("GET", "/api/ops/workflows", client=client, ops_token=ops_token)
+
+
+def ops_workflow(run_id, *, ops_token=None, client=None):
+    return request("GET", f"/api/ops/workflows/{run_id}", client=client, ops_token=ops_token)
+
+
+def ops_workflow_stop(run_id, *, ops_token=None, client=None):
+    return request("POST", f"/api/ops/workflows/{run_id}/stop", client=client, ops_token=ops_token)
+
+
+def ops_workflow_export(run_id, fmt="json", *, ops_token=None, client=None):
+    headers = _headers(ops_token=ops_token)
+    try:
+        res = _send("GET", f"/api/ops/workflows/{run_id}/export", client=client,
+                    params={"format": fmt}, headers=headers)
+    except httpx.HTTPError as exc:
+        raise ApiUnreachable(detail=str(exc))
+    if res.status_code >= 400:
+        _unwrap(res)
+    return res.content

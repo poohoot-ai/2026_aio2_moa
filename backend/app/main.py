@@ -19,12 +19,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import config, db, envelope, logging_setup
 from app.api import debug, health, intake, ops, order, review
-from app.services import history
+from app.services import history, metrics
 
 logging_setup.setup()
-if config.OPS_PASSWORD_IS_DEFAULT:
-    # PRD R-17 — 기본 비밀번호는 실습용이다. 배포 전에 .env 의 OPS_DASHBOARD_PASSWORD 를 12자 이상으로 채운다
-    logging_setup.log("ops_login", level="warning", detail="default_password_in_use")
+if config.OPS_PASSWORD_MISSING:
+    # PRD R-17 — 코드 기본값이 없으므로 값이 비면 **아무도 운영 대시보드에 들어가지 못한다**.
+    # .env 의 OPS_DASHBOARD_PASSWORD 를 12자 이상으로 채운다
+    logging_setup.log("ops_login", level="warning", detail="ops_password_not_set")
 
 app = FastAPI(title="Moa 에이전트 서버", version=health.VERSION,
               description="단톡방 대화 → 사람별 주문 정리. 호출 계약은 D-02 API스펙")
@@ -58,6 +59,12 @@ async def trace_and_log(request: Request, call_next):
     except Exception as exc:       # noqa: BLE001 — 어떤 예외든 포장된 500 으로 나간다
         error = f"{type(exc).__name__}: {exc}"[:500]
         response = envelope.internal_error(type(exc).__name__).response()
+        # 5.6.1 에이전트 실행(FT-02) — 처리되지 않은 예외 1회가 사건 판정 조건이다.
+        # 동기 DB 쓰기를 이벤트 루프에서 돌리면 백엔드가 그 동안 모든 요청을 못 받는다
+        # (2026-11-06 preflight 에서 실측) — history 와 같이 executor 로 보낸다
+        asyncio.get_running_loop().run_in_executor(
+            None, lambda: metrics.record("agent_error_count", "agent_process", 1,
+                                         threshold=1, breached=True, trace_id=trace_id))
     finally:
         envelope.current_trace.reset(token)
     duration_ms = int((time.monotonic() - started) * 1000)
@@ -88,6 +95,12 @@ async def on_api_failure(_: Request, exc: envelope.ApiFailure):
 async def on_db_unavailable(request: Request, exc: db.DbUnavailable):
     logging_setup.log("db_unavailable", level="warning", trace_id=envelope.current_trace.get(),
                       path=request.url.path, detail=str(exc)[:300])
+    # 5.6.1 DB(FT-03) — 연결 오류를 메트릭으로 남긴다. DB 가 죽어 있으면 기록도 실패하는데
+    # 그건 삼켜진다. 그 구간은 healing 의 DbOutage 가 메모리에 보류해 복구 후 적는다
+    asyncio.get_running_loop().run_in_executor(
+        None, lambda: metrics.record("db_connection_error", "menu_store", 1,
+                                     threshold=2, breached=True,
+                                     trace_id=envelope.current_trace.get()))
     return envelope.db_down(str(exc)).response()
 
 

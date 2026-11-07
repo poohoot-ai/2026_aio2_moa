@@ -189,10 +189,11 @@ def _after_reply(data: dict) -> None:
 def _share_button() -> None:
     # [단톡방 답장 반영하기]는 공유하기 바로 왼쪽의 보조 버튼이다(2026-11-05 사용자 요청).
     # 공유 → 단톡방 답장 → 반영이 한 흐름이라 같은 자리에 둔다. 주 버튼은 여전히 [공유하기] 하나다(U-1)
-    if not shared:
-        with st.container(key="moa_reply_open", width="content"):
-            if st.button(copy.S5_REPLY_OPEN_BUTTON, key="reply_open", icon=":material/forum:"):
-                dialogs.reply_dialog(_after_reply)
+    # 공유한 **뒤**에도 둔다. 이 서비스의 변경 요청 받기는 "한 번 공유하고 바꿀 것만 답장으로 받는다"라
+    # 답장은 공유 다음에 온다 — `not shared` 로 가려 두면 정작 쓸 때 버튼이 없다(2026-11-07 사용자 보고)
+    with st.container(key="moa_reply_open", width="content"):
+        if st.button(copy.S5_REPLY_OPEN_BUTTON, key="reply_open", icon=":material/forum:"):
+            dialogs.reply_dialog(_after_reply)
     # 화면의 주 버튼은 이 하나뿐이다 (U-1). 누르면 공유 대화상자가 열린다(케이스 21)
     if st.button(copy.S5_SHARE, key="share_open", type="primary", disabled=not can_share,
                  icon=":material/ios_share:"):

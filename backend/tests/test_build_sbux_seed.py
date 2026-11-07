@@ -38,6 +38,29 @@ def test_size_extra_is_the_difference_from_the_default_size():
     assert rows[("cup", "personal")] == (-400, False)
 
 
+def test_sizes_are_built_from_tall_price():
+    # 2026-11-06 사용자 결정: Short -800 · Grande +800 · Venti +1,600 — '사이즈' 열에 있는 것만
+    assert B.tall_based(5200, ["tall", "grande", "venti"]) == {"tall": 5200, "grande": 6000, "venti": 6800}
+    assert B.tall_based(5900, ["short", "tall", "grande", "venti"])["short"] == 5100
+    assert B.tall_based(4500, ["tall", "venti"]) == {"tall": 4500, "venti": 6100}      # 그란데 없는 티
+    assert B.tall_based(5800, ["short"]) == {"short": 5000}                         # 코르타도 — Tall 을 만들지 않는다
+
+
+def test_offered_sizes_follow_the_size_column():
+    text = "Short(237ml), Tall(355ml, 기본), Grande(473ml), Venti(591ml) / Short는 HOT만"
+    assert B.offered_sizes("차이 티 라떼", text) == ["short", "tall", "grande", "venti"]
+    assert B.offered_sizes("아이스 차이 티 라떼", text) == ["tall", "grande", "venti"]   # 아이스는 Short 없음
+    assert B.offered_sizes("에스프레소", "Solo, Doppio") == []                          # 사이즈 옵션 없이 한 가격
+    assert B.offered_sizes("ABC 클렌즈 190ML", "단일 용량 (제품명에 표기)") == []
+
+
+def test_memo_price_is_read_only_when_written_as_price():
+    assert B.memo_prices("Tall 5,200원 / Grande 5,800원 / 샷 추가 +600원") == ({"tall": 5200, "grande": 5800}, None)
+    assert B.memo_prices("사진 가격 4,700원 / 주스 가격표") == ({}, 4700)
+    assert B.memo_prices("메뉴 가격 미확인 · Short = Tall - 800원") == ({}, None)
+    assert B._won("#REF!") is None and B._won(None) is None and B._won(4100) == 4100
+
+
 def test_unpriced_size_is_not_offered():
     menu = {"menu_id": "m", "groups": ["size"], "sizes": ["tall", "venti"],
             "prices": {"tall": 4500, "venti": 6100}, "base": 4500, "default_size": "tall"}

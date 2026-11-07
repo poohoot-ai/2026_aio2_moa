@@ -42,7 +42,7 @@ def test_01_nameless_order_is_shared_without_names():
     out = share.view(sheet)
     assert out["show_names"] is False
     assert chat_parse.UNNAMED not in out["content"]
-    assert "아이스 아메리카노  x2" in out["content"] and "합계 2잔" in out["content"]
+    assert "1. 아이스 아메리카노 × 2잔" in out["content"] and "총 2잔 |" in out["content"]   # 이름 없는 대화는 인원을 말하지 않는다
 
 
 def test_01_named_order_still_shows_names():

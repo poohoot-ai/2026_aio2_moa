@@ -46,9 +46,9 @@ services:
     logging: *default-logging
     healthcheck:
       # slim 이미지에는 curl 이 없어서 파이썬으로 /health 를 확인한다
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
       interval: 5s
-      timeout: 3s
+      timeout: 10s
       retries: 5
 
   frontend:

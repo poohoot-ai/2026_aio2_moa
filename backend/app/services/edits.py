@@ -8,7 +8,7 @@
 import json
 import re
 
-from app import config, db, logging_setup
+from app import config, db, ids, logging_setup
 from app.services import brand as brand_service
 from app.services import changes, intake
 from app.services import menu as menu_service
@@ -68,6 +68,20 @@ def _revalidate(cur, session: dict, item_id: str) -> dict:
         " WHERE session_id = %s AND item_id = %s",
         (verdict["validation_status"], verdict["rule_verdict"], verdict["review_reason"],
          verdict["review_reason_text"], unit, estimated, session["session_id"], item_id))
+
+    if verdict["validation_status"] == "passed":
+        # 확인 필요가 풀렸으면 그 항목의 열린 질문도 끝난 것이다 — **여기 한 곳에서** 닫는다.
+        #
+        # 경로마다 닫게 두면 한 경로를 빠뜨리고, 그 경로에서만 조용히 다시 묻는다.
+        # 실제로 그랬다: 답장 반영(`suggestions.decide`)과 개별 바꾸기가 항목은 고치면서
+        # 질문은 `open` 으로 남겨, 이미 벤티로 정해진 사이즈를 질문 큐가 다시 물었다
+        # (2026-11-07 실측 · ORD-0038 q1). `reconcile` 이 질문을 만드는 조건도
+        # `validation_status <> 'passed'` 이므로 닫는 조건을 같은 기준으로 맞춘다.
+        #
+        # 질문에 답해서 풀린 경우는 그 질문이 이미 `answered` 라 여기서 건드리지 않는다
+        # (`void_for_item` 은 `status='open'` 만 본다). 되묻기 상한은 voided 까지 세므로
+        # 닫아도 질문이 무한히 다시 생기지 않는다.
+        questions.void_for_item(session["session_id"], item_id, cur=cur)
     return {**row, **verdict, "unit_price": unit, "estimated_price": estimated}
 
 
@@ -569,7 +583,23 @@ def apply_chat_event(session: dict, text: str, event_type: str, target: dict | N
     if event_type == "ignore":
         return {"kind": "no_change", "text": "주문에서 바꿀 것을 찾지 못했어요",
                 "undo_token": None}
+    if event_type == "add":
+        return add_from_chat(session, text, expected_version=expected_version)
     if target is None:
+        # 사람은 하나로 정해졌고 **어느 잔인지만** 모르는 경우를 구분해 말한다 (4차 보고 1번).
+        # 예전에는 둘 다 "어느 주문을 말하는지 찾지 못했어요"였다 — 이름을 똑바로 썼는데도 같은 답이
+        # 돌아와, 담당자에게는 채팅으로 고치는 길이 막힌 것으로 보였다
+        cups = _cups_of_named_person(session_id, text)
+        if cups:
+            # 문구는 **그 자체로 쓸 수 있게** 잔을 적어 넣는다 — 화면은 받은 말풍선만 그린다(P-06).
+            # 목록을 options 로만 주면 담당자는 "2건이에요"만 보고 무엇이 둘인지 모른다
+            spec = [_row_text(row, session) for row in cups]
+            listed = " · ".join(f"{n}) {label}" for n, label in enumerate(spec, start=1))
+            return {"kind": "ask_which", "undo_token": None,
+                    "text": f'{cups[0]["person"]} 님 주문이 {len(cups)}건이에요 — {listed}. '
+                            f'어느 것인지 알려 주세요. 주문서 화면에서 한 잔씩 고칠 수도 있어요',
+                    "options": [{"value": row["item_id"], "label": label}
+                                for row, label in zip(cups, spec)]}
         return {"kind": "no_change", "text": "어느 주문을 말하는지 찾지 못했어요",
                 "undo_token": None}
 
@@ -608,29 +638,226 @@ def apply_chat_event(session: dict, text: str, event_type: str, target: dict | N
             "changed_item_ids": [target["item_id"]], "version": version}
 
 
-def _find_target(session_id: str, text: str) -> dict | None:
-    """문장에서 사람 이름 · 메뉴 이름으로 대상을 찾는다.
+# --- 채팅으로 주문 추가 (API-022 · 4차 보고 1번) --------------------------------
+# 예전에는 채팅으로 주문을 **만드는 경로가 없었다**(N-06 `_chat_route` 주석). 담당자가
+# "박서연 아이스 아메리카노 한 잔 추가해줘"를 치면 어느 행도 그 사람의 것이 아니므로
+# "어느 주문을 말하는지 찾지 못했어요"로 끝났다 — 단톡방에서 늦게 온 주문을 넣을 길이 없었다.
+#
+# 이름은 **규칙으로만** 읽는다(LLM 호출 0건). 읽지 못하면 임의로 정하지 않고 무엇이 더
+# 필요한지 말한다 — 이름을 잘못 읽으면 엉뚱한 사람 주문이 조용히 생긴다.
+_NAME_PARTICLE = re.compile(r"(?:님께서|님에게|님한테|님은|님이|님도|님|씨는|씨가|씨도|씨|"
+                            r"에게|한테|께서|께|이는|이가|이도|은|는|이|가|도)$")
+_HANGUL_NAME = re.compile(r"^[가-힣]{2,5}$")
+# "… 추가해줘" 의 지시 꼬리. 메뉴 매칭에 들어가면 **메뉴 이름이 아니게 되어 미등록으로 떨어진다**
+# ("아이스 아메리카노 톨 한 잔 추가해줘" → 매칭 실패 실측 2026-11-05). 수량 · 사양은 남긴다
+_ADD_TAIL = re.compile(r"\s*(?:좀\s*)?(?:더\s*)?(?:추가|넣어|시켜|주문)\s*(?:해|하)?\s*"
+                       r"(?:줘요|줘|주세요|주시고|주라|줄래|할게|해|요)?\s*[.!?~]*\s*$")
+# "넣어 달라"고 적었는가 — 채팅 추가의 유일한 근거다. 여기 하나에 둔다(N-06 `_chat_route` 도 쓴다):
+# `intake.classify` 는 **분류되지 않는 말을 add 로** 돌려주므로(잡담 포함) 이 울타리가 없으면
+# 잡담이 주문 추가 시도가 되고, 담당자는 "메뉴 이름을 적어 주세요"라는 엉뚱한 답을 받는다
+ADD_INSTRUCTION = re.compile(r"추가|넣어|시켜|더\s*(?:한\s*잔|하나|주문)")
 
-    못 찾으면 **임의로 고르지 않는다** — 담당자에게 "찾지 못했어요"를 돌려준다.
-    아무 행이나 고치면 담당자가 모르는 채로 틀린 주문을 공유한다.
+
+def _known_people(session_id: str) -> list[str]:
+    return [r["person"] for r in db.fetch_all(
+        "SELECT DISTINCT person FROM app.order_item "
+        " WHERE session_id = %s AND removed = false AND person IS NOT NULL", (session_id,))]
+
+
+def _leading_name(session_id: str, text: str) -> str | None:
+    """문장 맨 앞 낱말을 이름으로 읽는다 — 메뉴 · 사양으로 읽히는 말이면 이름이 아니다.
+
+    거르는 것 셋. 하나라도 빠지면 **엉뚱한 사람 주문이 조용히 생긴다.**
+      ① 메뉴 이름 · 별칭      "라떼 추가해줘" 의 "라떼"
+      ② 사양 · 온도 낱말      "아이스 아메리카노 …" 의 "아이스", "톨 …" 의 "톨"
+      ③ 뒤에 메뉴가 없는 말   이름이라고 볼 근거가 없다
     """
-    rows = db.fetch_all(
-        "SELECT i.item_id, i.person, i.menu_text, m.name AS menu_name "
+    head = (text or "").strip().split()
+    if not head:
+        return None
+    word = _NAME_PARTICLE.sub("", head[0].strip()) or head[0].strip()
+    if not _HANGUL_NAME.match(word):
+        return None
+    brand_id, menu_version = _brand_of(session_id)
+    if not brand_id:
+        return None
+    if menu_service.match(brand_id, menu_version, word).get("menu_id"):
+        return None                                                      # ①
+    if intake._options(word) or intake.temperature_hint(word):
+        return None                                                      # ②
+    if not menu_service.mentions(brand_id, menu_version, " ".join(head[1:])):
+        return None                                                      # ③
+    return word
+
+
+def _brand_of(session_id: str) -> tuple[str | None, str | None]:
+    row = db.fetch_one("SELECT brand_id, menu_version FROM app.order_session WHERE session_id = %s",
+                       (session_id,))
+    return (row["brand_id"], row["menu_version"]) if row else (None, None)
+
+
+def _named_stranger(session_id: str, text: str) -> str | None:
+    """세션에 없는 사람 이름이 문장 맨 앞에 적혀 있는가 — 그러면 수정이 아니라 추가다."""
+    if any(p and p in text for p in _known_people(session_id)):
+        return None
+    return _leading_name(session_id, text)
+
+
+def chat_person(session: dict, text: str) -> str | None:
+    """이 문장이 누구 주문인가 — 세션에 있는 이름이 먼저, 없으면 맨 앞 낱말."""
+    session_id = session["session_id"]
+    named = [p for p in _known_people(session_id) if p and p in text]
+    if len(named) == 1:
+        return named[0]
+    if named:
+        return None                      # 두 사람 이름이 함께 있으면 누구 것인지 모른다
+    return _leading_name(session_id, text)
+
+
+def _without_person(text: str, person: str) -> str:
+    """이름(과 붙은 조사)을 뺀 나머지 — 메뉴 매칭이 이름을 메뉴 글자로 읽지 않게."""
+    words = []
+    dropped = False
+    for word in (text or "").split():
+        if not dropped and _NAME_PARTICLE.sub("", word) == person:
+            dropped = True
+            continue
+        words.append(word)
+    return " ".join(words) if dropped else (text or "")
+
+
+def add_from_chat(session: dict, text: str, *, expected_version: int | None) -> dict:
+    """채팅 한 줄로 주문을 새로 만든다. 판정 · 금액 · 질문은 분석 경로와 **같은 함수**를 지난다."""
+    from app.graph import nodes
+
+    session_id = session["session_id"]
+    # 메뉴를 먼저 본다 — 메뉴가 아예 없으면 이름을 못 읽은 것이 아니라 메뉴를 안 적은 것이다.
+    # 순서를 뒤집으면 "박서연 추가해줘"에 "누구 주문인지 알려 주세요"가 돌아가 담당자가 이름을 의심한다
+    if not menu_service.mentions(session["brand_id"], session["menu_version"], text):
+        if not ADD_INSTRUCTION.search(text or ""):
+            # 넣어 달라고 적지도 않았고 메뉴도 없다 — 주문에 관한 말이 아니다.
+            # `intake.classify` 가 잡담도 add 로 돌려주므로 여기까지 온다("오늘 날씨 좋네요" 실측)
+            return {"kind": "no_change", "undo_token": None,
+                    "text": "주문에서 바꿀 것을 찾지 못했어요"}
+        return {"kind": "no_change", "undo_token": None,
+                "text": "메뉴를 찾지 못했어요. 메뉴 이름을 적어 주세요"}
+
+    person = chat_person(session, text)
+    if not person:
+        return {"kind": "no_change", "undo_token": None,
+                "text": "누구 주문인지 알려 주세요. 예: '박서연 아이스 아메리카노 한 잔 추가'"}
+
+    # 이름과 지시 꼬리를 떼고 **주문 문장만** 남긴다 — 분석 경로가 받는 모양과 같아진다
+    rest = _ADD_TAIL.sub("", _without_person(text, person)).strip()
+    rest = re.sub(r"\s*더\s*$", "", rest).strip() or _without_person(text, person)
+    event = {"message_id": "chat", "_raw_text": rest, "person": person}
+    drafts = []
+    for item in intake.build_items(rest, person):
+        row = nodes.match_one(item, event, [], 0, session)
+        if row.get("menu_id") or row.get("candidates"):
+            drafts.append(row)
+    if not drafts:
+        return {"kind": "no_change", "undo_token": None,
+                "text": "메뉴를 찾지 못했어요. 메뉴 이름을 적어 주세요"}
+
+    with db.transaction() as cur:
+        made, texts, last = [], [], {}
+        for row in drafts:
+            item_id = _next_item_id(cur, session_id)
+            cur.execute(
+                "INSERT INTO app.order_item "
+                "  (item_id, session_id, person, menu_id, menu_text, options, ambiguous_options, "
+                "   custom_request, quantity, validation_status, rule_verdict, review_reason) "
+                # 넣는 순간의 값은 자리만 채운다 — 바로 뒤 `_revalidate` 가 같은 규칙으로 다시 적는다
+                # (rule_verdict 는 passed · failed · undecided 3분기다 — D-07 4.5 CHECK)
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'needs_review', 'undecided', %s)",
+                (item_id, session_id, person, row.get("menu_id"),
+                 row.get("menu_name") or row.get("match_text") or rest,
+                 json.dumps(row.get("options") or {}, ensure_ascii=False),
+                 json.dumps(row.get("ambiguous_options") or {}, ensure_ascii=False),
+                 row.get("custom_request"), row.get("quantity") or 1,
+                 None if row.get("menu_id") else "unregistered_menu"))
+            # 판정 · 금액은 수정 경로와 같은 함수가 한다 — 규칙을 복사하지 않는다
+            last = _revalidate(cur, session, item_id)
+            made.append(item_id)
+            texts.append(_row_text(last, session))
+
+        token = changes.record(cur, session_id, method="chat_add", item_id=made[0], who=person,
+                               before_text="없음", after_text=" · ".join(texts),
+                               # 되돌리기는 **빼기**다 — 추가 전 상태가 "그 주문이 없음"이다
+                               before_json={**_row_json(last), "removed": True},
+                               after_json=_row_json(last))
+        version = _commit(cur, session, expected_version=expected_version)
+
+    added = " · ".join(texts)
+    return {"kind": "applied", "undo_token": token, "changed_item_ids": made, "version": version,
+            "text": f'{person} 님 주문으로 {added}{_ro(added)} 넣었어요.'}
+
+
+def _next_item_id(cur, session_id: str) -> str:
+    """기존 번호와 겹치지 않는 다음 항목 번호 — 항목을 지우지 않으므로 최대 번호 + 1 이다."""
+    cur.execute("SELECT item_id FROM app.order_item WHERE session_id = %s", (session_id,))
+    used = {r["item_id"] for r in cur.fetchall()}
+    seq = len(used) + 1
+    while ids.item_id(session_id, seq) in used:
+        seq += 1
+    return ids.item_id(session_id, seq)
+
+
+def _live_rows(session_id: str) -> list[dict]:
+    return db.fetch_all(
+        "SELECT i.item_id, i.person, i.menu_text, i.options, i.quantity, m.name AS menu_name "
         "  FROM app.order_item i LEFT JOIN app.menu m ON m.menu_id = i.menu_id "
         " WHERE i.session_id = %s AND i.removed = false ORDER BY i.item_id",
         (session_id,))
+
+
+def _find_target(session_id: str, text: str) -> dict | None:
+    """문장에서 사람 이름 · 메뉴 이름 · 옵션으로 대상을 찾는다.
+
+    못 찾으면 **임의로 고르지 않는다** — 담당자에게 되묻거나 "찾지 못했어요"를 돌려준다.
+    아무 행이나 고치면 담당자가 모르는 채로 틀린 주문을 공유한다.
+    """
+    rows = _live_rows(session_id)
     by_person = [r for r in rows if r["person"] and r["person"] in text]
     if len(by_person) == 1:
         return by_person[0]
-    pool = by_person or rows
-    by_menu = [r for r in pool
+    if by_person:
+        # 사람은 하나인데 잔이 여럿이다 — 문장에 적힌 메뉴 · 옵션으로 좁힌다.
+        # 좁혀서 **정확히 하나**가 남을 때만 쓴다(N-06 `_narrow_by_options` 와 같은 규칙)
+        narrowed = _narrow(by_person, text)
+        return narrowed[0] if len(narrowed) == 1 else None
+    if _named_stranger(session_id, text):
+        # 세션에 없는 사람 이름이 적혀 있다 — 그 사람의 주문은 없으므로 **남의 행을 고르지 않는다**.
+        # 예전에는 메뉴 이름이 겹치는 남의 행이나 "행이 하나뿐"이라는 이유로 아무 행을 골라,
+        # "박서연 … 추가해줘"가 김민수 주문을 건드리고 422 로 끝났다 (4차 보고 1번)
+        return None
+    narrowed = _narrow(rows, text)
+    if len(narrowed) == 1:
+        return narrowed[0]
+    if len(rows) == 1:
+        return rows[0]
+    return None
+
+
+def _narrow(rows: list[dict], text: str) -> list[dict]:
+    """메뉴 이름으로, 그래도 여럿이면 문장에 적힌 옵션으로 좁힌다."""
+    by_menu = [r for r in rows
                if (r["menu_name"] and r["menu_name"] in text)
                or (r["menu_text"] and r["menu_text"] in text)]
-    if len(by_menu) == 1:
-        return by_menu[0]
-    if len(pool) == 1:
-        return pool[0]
-    return None
+    pool = by_menu if len(by_menu) == 1 else rows
+    said = intake._options(text)
+    if len(pool) < 2 or not said:
+        return pool
+    hit = [r for r in pool
+           if all((r["options"] or {}).get(group) == value for group, value in said.items())]
+    return hit if len(hit) == 1 else pool
+
+
+def _cups_of_named_person(session_id: str, text: str) -> list[dict]:
+    """문장이 가리킨 사람의 잔이 둘 이상일 때 그 목록. 아니면 빈 목록."""
+    rows = [r for r in _live_rows(session_id) if r["person"] and r["person"] in text]
+    return rows if len(rows) > 1 else []
 
 
 def _apply_text_change(cur, session, before: dict, text: str) -> bool:

@@ -7,6 +7,9 @@ F-6 폴백: 메뉴 캐시는 **프로세스 메모리**다 (D-07 D-8). DB 가 �
 DB 에 두면 폴백이 성립하지 않는다. 캐시는 조회 전용이고 DB 에 다시 쓰지 않는다.
 """
 
+import hashlib
+import json
+import re
 import time
 
 from app import config, db
@@ -60,6 +63,9 @@ def _load(brand_id: str, menu_version: str) -> dict:
     return {
         "menus": menus, "by_id": by_id, "alias_index": alias_index,
         "options": options, "store_words": store_words, "loaded_at": time.monotonic(),
+        "checksum": hashlib.sha256(json.dumps(
+            {"menus": menus, "aliases": aliases, "options": options},
+            ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest(),
     }
 
 
@@ -68,16 +74,54 @@ def catalog(brand_id: str, menu_version: str | None = None, *, allow_stale: bool
     menu_version = menu_version or config.MENU_VERSION
     key = (brand_id, menu_version)
     cached = _CACHE.get(key)
+    try:
+        from app.services import incidents
+        injected = any(row.get("target") == "menu_store" and row.get("mode") == "block"
+                       for row in incidents.active_injections())
+    except db.DbUnavailable:
+        injected = False
+    if injected:
+        if cached and allow_stale:
+            return {**cached, "stale": True}
+        raise db.DbUnavailable("F-6 주입: 메뉴 카탈로그 읽기 불가, 일치 캐시 없음")
     if cached and time.monotonic() - cached["loaded_at"] < _CACHE_TTL_SEC:
         return cached
     try:
         loaded = _load(brand_id, menu_version)
     except db.DbUnavailable:
-        if cached and allow_stale:
+        # 메뉴 조회 한정 장애와 전체 DB 단절을 구분한다.
+        try:
+            db.fetch_one("SELECT 1")
+            database_reachable = True
+        except db.DbUnavailable:
+            database_reachable = False
+        if cached and allow_stale and database_reachable:
             return {**cached, "stale": True}
         raise
     _CACHE[key] = loaded
     return loaded
+
+
+def preload_active() -> dict:
+    """Warm every active brand/version before an instance is marked ready."""
+    rows = db.fetch_all("SELECT DISTINCT brand_id,menu_version FROM app.menu "
+                        "WHERE is_active=true ORDER BY brand_id,menu_version")
+    if not rows:
+        raise db.DbUnavailable("active menu catalog is empty")
+    checksums = {}
+    for row in rows:
+        key = (row["brand_id"], row["menu_version"])
+        cached = _CACHE.get(key)
+        if cached and time.monotonic() - cached["loaded_at"] < _CACHE_TTL_SEC:
+            loaded = cached
+        else:
+            loaded = _load(*key)
+            _CACHE[key] = loaded
+        checksum = loaded.get("checksum") or ""
+        if not re.fullmatch(r"[0-9a-f]{64}", checksum):
+            raise db.DbUnavailable("menu cache checksum validation failed")
+        checksums[f"{key[0]}:{key[1]}"] = checksum
+    return {"catalogs": len(checksums), "checksums": checksums}
 
 
 def cache_state() -> dict:
@@ -209,6 +253,86 @@ def mentions(brand_id: str, menu_version: str, text: str) -> list[str]:
                 break
             start = key.find(alias, start + 1)
     return found
+
+
+# --- 지금 못 내는 메뉴를 가리키는 말 찾기 --------------------------------------
+#
+# 참조 주문("그걸로")이 가리킨 것이 **메뉴 이름이긴 한데 이 매장 기준에는 없을** 때가 있다.
+# 그것을 모르면 참조 해소가 그 말을 그냥 지나쳐 더 오래된 주문을 집는다 — 2026-11-07 실측:
+#
+#   [정하준] 민트 초코가 유명하대        <- 가리킨 것. 스타벅스 기준에는 없다
+#   [최유나] 그럼 난 그걸로 하나~        -> 아이스 아메리카노 로 **확정**됐다(확인 필요도 안 붙음)
+#
+# 맞는 결론은 "민트 초코는 지금 메뉴에 없어요 — 확인해 주세요"다(미등록 → NEEDS_REVIEW).
+_ALL_NAMES: dict = {"at": 0.0, "index": None}
+_ALL_NAMES_TTL_SEC = 300
+
+# 2글자 별칭(아아 · 라떼 · 모카 …)은 잡담에 우연히 들어갈 수 있다. 다른 매장 기준에만 있는
+# 2글자가 걸리면 멀쩡한 참조를 막으므로 3글자부터 본다 — 놓치는 쪽이 틀리는 쪽보다 낫다
+_MIN_UNAVAILABLE_LEN = 3
+
+
+def _all_menu_names() -> dict[str, list[dict]]:
+    """정규화한 이름 · 별칭 -> 그 이름을 쓰는 메뉴들. **모든 매장 기준 · 비활성 포함.**
+
+    `catalog()` 은 지금 매장의 활성 메뉴만 담는다(그래야 매칭이 맞다). 이 사전은 반대로
+    "시스템이 아는 메뉴 이름 전부"를 담아, 못 내는 메뉴를 **가리켰다는 사실**만 알아내는 데 쓴다.
+    여기서 나온 menu_id 로 주문을 만들지 않는다 — 판정에만 쓴다.
+    """
+    now = time.monotonic()
+    if _ALL_NAMES["index"] is not None and now - _ALL_NAMES["at"] < _ALL_NAMES_TTL_SEC:
+        return _ALL_NAMES["index"]
+
+    index: dict[str, list[dict]] = {}
+
+    def add(label: str, row: dict) -> None:
+        key = normalize(label or "")
+        if len(key) < _MIN_UNAVAILABLE_LEN:
+            return
+        index.setdefault(key, []).append(row)
+
+    for row in db.fetch_all(
+            "SELECT menu_id, brand_id, menu_version, name, is_active FROM app.menu"):
+        add(row["name"], row)
+    for row in db.fetch_all(
+            "SELECT a.alias, m.menu_id, m.brand_id, m.menu_version, m.name, m.is_active "
+            "  FROM app.menu_alias a JOIN app.menu m ON m.menu_id = a.menu_id"):
+        add(row["alias"], row)
+
+    _ALL_NAMES.update({"at": now, "index": index})
+    return index
+
+
+def unavailable_mentions(brand_id: str, menu_version: str, text: str) -> list[dict]:
+    """이 문장이 **지금 매장 기준으로는 낼 수 없는 메뉴**를 가리키는가.
+
+    지금 낼 수 있는 메뉴를 가리키면 빈 목록이다 — 그건 `mentions()` 가 할 일이다.
+    겹치지 않게 긴 이름부터 집는 것도 `mentions()` 와 같다.
+    """
+    if mentions(brand_id, menu_version, text):
+        return []
+    key = normalize(text or "")
+    if not key:
+        return []
+    index = _all_menu_names()
+    hits: list[dict] = []
+    taken: list[tuple[int, int]] = []
+    for alias in sorted(index, key=len, reverse=True):
+        start = key.find(alias)
+        if start < 0:
+            continue
+        end = start + len(alias)
+        if any(s < end and start < e for s, e in taken):
+            continue
+        rows = index[alias]
+        if any(r["brand_id"] == brand_id and r["menu_version"] == menu_version
+               and r["is_active"] for r in rows):
+            # 지금 낼 수 있는 메뉴다. `mentions()` 가 못 집었어도 여기서 막지 않는다
+            continue
+        taken.append((start, end))
+        hits.append({"text": alias, "name": rows[0]["name"], "menu_id": rows[0]["menu_id"],
+                     "brand_id": rows[0]["brand_id"], "is_active": rows[0]["is_active"]})
+    return hits
 
 
 def with_temperature(brand_id: str, menu_version: str, hit: dict, hint: str | None) -> dict:

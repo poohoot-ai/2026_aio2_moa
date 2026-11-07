@@ -338,6 +338,15 @@ CREATE INDEX IF NOT EXISTS idx_question_open ON app.review_question (session_id,
   WHERE status = 'open';
 
 CREATE INDEX        IF NOT EXISTS idx_change_session ON app.change_log (session_id, created_at DESC);
+-- 2026-11-05 4차 보고 1번 — 채팅으로 **주문을 새로 넣는** 경로가 생겼다 (edits.add_from_chat).
+-- O-6 변경 이력이 "채팅으로 수정"과 "채팅으로 추가"를 구분해야 한다 — 되돌리기 동작이 다르다
+-- (수정은 값 복원 · 추가는 빼기). 이미 만들어진 표에는 CREATE TABLE 의 CHECK 가 적용되지
+-- 않으므로 위 4.1 · 4.5 와 같은 방식으로 제약을 바꿔 끼운다.
+ALTER TABLE app.change_log DROP CONSTRAINT IF EXISTS change_log_method_check;
+ALTER TABLE app.change_log ADD CONSTRAINT change_log_method_check
+  CHECK (method IN ('chat_cancel','question_answer','chat_edit','chat_add',
+                    'reply_applied','auto_recovery'));
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_undo_token      ON app.change_log (undo_token)
   WHERE undo_token IS NOT NULL;
 

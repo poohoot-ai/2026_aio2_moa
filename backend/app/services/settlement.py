@@ -98,6 +98,41 @@ def integrity(session_id: str) -> dict:
     }
 
 
+def check(rows: list[dict]) -> dict:
+    """로그용 정산 대조 — `v_settlement_check` + `integrity()` 와 **같은 규칙**을 메모리에서 계산한다.
+
+    내부 검증 자료(SC-5)를 로그 한 줄로 남기기 위한 것이다. 판정 기준은 `integrity()` 와 같다 —
+    미정(NULL) 항목이 하나라도 있으면 두 합계가 우연히 같아도 통과로 보지 않는다.
+    """
+    live = [r for r in rows if not r.get("removed")]
+    lines = compute_lines(live)
+    priced = [int(r["estimated_price"]) for r in live if r.get("estimated_price") is not None]
+    undecided = len(live) - len(priced)
+    person_total = sum(line["amount"] for line in lines) if lines else None
+    item_total = sum(priced) if priced else None      # SQL SUM 처럼 대상이 없으면 NULL
+    ok = undecided == 0 and person_total is not None and person_total == item_total
+    return {
+        "integrity_ok": ok,
+        "person_total": person_total,
+        "item_total": item_total,
+        "undecided_count": undecided,
+        "person_amounts": {line["person"]: line["amount"] for line in lines},
+    }
+
+
+def count_people(names) -> int:
+    """인원 수 — 이름이 있으면 같은 이름은 1명, `이름 없음`은 **항목마다 1명**으로 센다.
+
+    이름이 없으면 같은 사람인지 알 수 없다. 중복 없이 세면 이름 없는 참여자 여럿이 1명으로 줄어
+    "C · 이름 없음 · 이름 없음 · D"가 3명으로 나갔다(2026-11-06). 적게 세는 것보다 따로 세는 쪽을 택한다.
+    """
+    from app.services.chat_parse import UNNAMED
+
+    names = list(names)
+    unnamed = sum(1 for name in names if not name or name == UNNAMED)
+    return len({name for name in names if name and name != UNNAMED}) + unnamed
+
+
 def totals(rows: list[dict]) -> dict:
     """합계 — 미정이 하나라도 있으면 estimated_total 을 None 으로 둔다."""
     live = [r for r in rows if not r.get("removed")]
@@ -106,7 +141,7 @@ def totals(rows: list[dict]) -> dict:
     total = None if undecided else sum(int(r["estimated_price"]) for r in live)
     return {
         "cups": cups,
-        "people": len({r["person"] for r in live}),
+        "people": count_people(r.get("person") for r in live),
         "estimated_total": total,
         "undecided_count": len(undecided),
     }

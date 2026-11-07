@@ -41,9 +41,15 @@ FROM app.order_session s;
 -- 지표 (D-10: 집계값을 저장하지 않는다)
 CREATE OR REPLACE VIEW healing.v_metrics AS
 SELECT
-  AVG(EXTRACT(EPOCH FROM (i.detected_at - f.injected_at)))                       AS mttd_sec,
-  -- MTTR 은 PRD SC-3 정의(recovered_at - injected_at)를 따른다 (v1.9 · R-20). 주입 시각이 없으면 탐지 시각부터
-  AVG(EXTRACT(EPOCH FROM (i.resolved_at - COALESCE(i.injected_at, f.injected_at, i.detected_at))))
+  -- MTTD = 탐지 − **장애 시작**. 주입 장애는 injected_at, 저절로 난 장애는 first_signal_at
+  -- (첫 위반 관측 시각)을 쓴다. 둘 다 없으면 NULL 로 두고 평균에서 빠진다 — 0 을 지어내지 않는다.
+  -- 이 COALESCE 가 없던 동안 mttd_sec 는 늘 NULL 이었다(2026-11-07 실측 · 사건 12건).
+  AVG(EXTRACT(EPOCH FROM (i.detected_at - COALESCE(i.injected_at, f.injected_at, i.first_signal_at))))
+                                                                                  AS mttd_sec,
+  -- MTTR 은 PRD SC-3 정의(recovered_at - injected_at)를 따른다 (v1.9 · R-20).
+  -- 시작점은 MTTD 와 같은 기준이어야 한다 — 주입 시각 > 첫 징후 > 탐지 시각 순으로 찾는다
+  AVG(EXTRACT(EPOCH FROM (i.resolved_at
+        - COALESCE(i.injected_at, f.injected_at, i.first_signal_at, i.detected_at))))
                                                                                   AS mttr_sec,
   AVG(CASE WHEN i.status = 'recovered' THEN 1.0 ELSE 0.0 END)
     FILTER (WHERE i.is_false_positive = false)                                    AS recovery_success_rate,

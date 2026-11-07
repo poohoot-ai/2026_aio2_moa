@@ -22,13 +22,20 @@ _IMAGE_MAGIC = (b"\x89PNG", b"\xff\xd8\xff\xe0", b"\xff\xd8\xff\xe1", b"GIF8", b
 
 FILE_ERRORS = {
     "IMAGE_NOT_SUPPORTED": "사진은 읽지 못해요. 대화를 복사해 붙여넣거나 .txt 파일로 올려 주세요",
-    "FILE_NOT_SUPPORTED": "이 파일은 읽을 수 없어요. 대화를 복사해 붙여넣어 주세요",
+    "FILE_NOT_SUPPORTED": "이 파일은 읽을 수 없어요. 대화를 복사해 붙여넣거나 .txt 파일로 올려 주세요",
     "TOO_LARGE": "대화가 너무 길어요. 나눠서 올려 주세요",
 }
 
+# 첨부는 .txt 만 받는다 (PRD v1.1 §1 입력). 화면 업로더(st.file_uploader type=)에는 제한을 걸지 않고 —
+# 걸면 설계 문구가 아니라 Streamlit 기본 오류가 뜬다 — 서버가 여기서 거른 뒤 안내 문구를 돌려준다.
+_TEXT_SUFFIX = ".txt"
+
 
 def judge_file(filename: str, data: bytes) -> tuple[str | None, str | None]:
-    """확장자가 아니라 **내용으로** 판정한다 (P-06 Streamlit 구현 대응).
+    """첨부 파일을 판정한다 — 확장자는 `.txt` 만, 내용은 텍스트(UTF-8 · CP949)만.
+
+    순서: 크기 → 이미지(확장자 또는 내용) → `.txt` 확장자 → 텍스트 디코딩.
+    이미지는 확장자를 `.txt` 로 바꿔도 내용으로 걸러 사진 안내를 준다.
 
     돌려주는 값: (raw_text, None) 또는 (None, 에러코드)
     """
@@ -37,6 +44,8 @@ def judge_file(filename: str, data: bytes) -> tuple[str | None, str | None]:
     lowered = (filename or "").lower()
     if lowered.endswith(_IMAGE_SUFFIXES) or data[:4] in _IMAGE_MAGIC:
         return None, "IMAGE_NOT_SUPPORTED"
+    if not lowered.endswith(_TEXT_SUFFIX):
+        return None, "FILE_NOT_SUPPORTED"
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError:

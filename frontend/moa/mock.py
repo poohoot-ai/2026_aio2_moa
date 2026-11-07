@@ -428,14 +428,19 @@ def share_text(case: str = "base") -> dict:
               "custom_request": g.get("custom_request")} for g in groups]
     total_text = f'합계 {totals["cups"]}잔 · 예상 {totals["estimated_total"]:,}원'
 
-    body = []
-    for line in lines:
-        body.append(f'{line["menu_text"]}  x{line["quantity"]}')
-        body.append(f'  {" · ".join(line["people"])}')
-        if line["custom_request"]:
-            body.append(f'  요청: {line["custom_request"]}')
-    tail = ["", total_text, totals["notice"], "Moa · 비공식 시연 서비스"]
-    content = chr(10).join([head, sub, ""] + body + tail)
+    # 복사 텍스트 — 서버(share.render_text)와 같은 번호 목록 형식(2026-11-06)
+    count = f'{sheet["summary"]["people"]}명 · {sheet["summary"]["cups"]}잔'
+    body = [f'[{BRAND["label"].replace(" 메뉴 기준", "")} 주문 정리]', "",
+            f"주문 현황: {count}", f'예상 결제 금액: {totals["estimated_total"]:,}원']
+    for index, g in enumerate(groups, start=1):
+        size = next((o["value"] for o in g.get("options", []) if o.get("label") == "사이즈"), None)
+        extras = [o["value"] for o in g.get("options", []) if o.get("label") != "사이즈"]
+        body += ["", f'{index}. {g["menu_text"]}{f" ({size})" if size else ""} × {g["quantity"]}잔',
+                 "주문자: " + ", ".join(g["people"])]
+        body += [f"-{d}" for d in extras + ([g["custom_request"]] if g.get("custom_request") else [])]
+    body += ["", f'총 {count} | 예상 {totals["estimated_total"]:,}원', "",
+             "※ 금액은 참고용이며 실제 결제 금액과 다를 수 있습니다."]
+    content = chr(10).join(body)
     return {
         "format": "text",
         "content": content,
@@ -447,44 +452,170 @@ def share_text(case: str = "base") -> dict:
     }
 
 
-# --- SCR-006 케이스 22 — 운영 대시보드 --------------------------------------
-OPS_STATUS = {
-    "updated_at_text": "14:02:16",
-    "environment_label": "실습 환경",
-    "services": [
-        {"name": "주문 해석 1차", "state": "blocked", "state_text": "차단 · 42초 후 시험"},
-        {"name": "주문 해석 대체", "state": "up", "state_text": "정상"},
-        {"name": "메뉴 저장소", "state": "up", "state_text": "정상"},
-    ],
+# --- SCR-006 운영 대시보드 — 정본 시안 `Moa_운영대시보드.svg` 5개 상태 ----------------
+# 24 승인 필요 · 25-1 F-1 주입 직후 · 25-2 F-1 복구 중 · 25-3 F-1 복구 완료(대체 해석기) · 26 정상 운영
+# 화면 테스트와 미리보기는 `_preview_case` 세션 값(아래 OPS_PREVIEW_CASES 의 라벨)으로 상태를 고른다.
+# 아래 칸 중 서버에 아직 없는 것(G-1 replicas · G-3/G-4 trials · integrity_issue_count · active_injection ·
+# alerts · ago_text · elapsed_sec)은 화면이 기대하는 모양을 보여 주는 계약 견본이기도 하다.
+OPS_PREVIEW_CASES = {
+    "24 승인 필요": "approval",
+    "25-1 주입 직후": "injected",
+    "25-2 복구 중": "recovering",
+    "25-3 복구 완료": "recovered",
+    "26 정상 운영": "normal",
 }
 
-OPS_APPROVALS = {
-    "approvals": [
-        {"incident_id": "INC-0007", "summary": "응답 지연 · 대체 서비스도 실패",
-         "waiting_text": "3분째 대기",
-         "recommendation_text": "추천: 수동 점검 후 재개 · 증거 3건 (타임아웃 ×3, 대체 경로 5xx)"},
-    ],
+_REPLICAS_UP = [{"key": "app_a", "name": "앱 A", "state": "up", "active": True},
+                # SC-12 — 복제본 전환은 감지 · 전환 각 15초 이내
+                {"key": "app_b", "name": "앱 B", "state": "up", "active": True, "switch_sec": 11}]
+
+
+def _svc(key, name, state, *, active=False, text="", probe=None, streak=0):
+    return {"key": key, "name": name, "state": state, "state_text": text, "active": active,
+            "probe_in_sec": probe, "healthy_streak": streak}
+
+
+_PRIMARY_UP = _svc("order_interpreter_primary", "주문 해석 1차", "up", active=True, text="정상")
+_BACKUP_STANDBY = _svc("order_interpreter_backup", "주문 해석 대체", "up", text="정상")
+_BACKUP_ACTIVE = _svc("order_interpreter_backup", "주문 해석 대체", "up", active=True, text="정상")
+_STORE_UP = _svc("menu_store", "메뉴 저장소", "up", active=True, text="정상")
+
+
+def _status(services, *, active, injection=None, alerts=None):
+    return {"updated_at_text": "14:02:16", "environment_label": "실습 환경", "replicas": _REPLICAS_UP,
+            "services": services, "active_interpreter": active, "cache_fallback_active": False,
+            "probe_need": 3, "active_injection": injection, "alerts": alerts or []}
+
+
+def _inc(iid, fault, code, state, text, ago, *, elapsed=None, approved=False, detected="14:00:02"):
+    return {"incident_id": iid, "fault": fault, "fault_code": code, "state": state, "state_text": text,
+            "ago_text": ago, "elapsed_sec": elapsed, "approved": approved,
+            "detected_at_text": detected, "resolved_at_text": "-"}
+
+
+_INC_5 = _inc("INC-0005", "F-6", "DB_UNAVAILABLE", "failed", "실패 · 수동 점검", "34분 전", elapsed=64)
+_INC_6 = _inc("INC-0006", "F-3", "WORKER_DOWN", "recovered", "복구 성공", "12분 전", elapsed=27)
+# UNKNOWN 은 F 코드가 아니라 원인 미확인 에스컬레이션이다(PRD SC-6) — 코드 자리에 그대로 쓴다
+_INC_7_WAIT = _inc("INC-0007", "UNKNOWN", "UNKNOWN", "awaiting_approval", "승인 대기", "2분 전")
+_INC_7_DONE = _inc("INC-0007", "UNKNOWN", "UNKNOWN", "recovered", "승인 후 복구", "9분 전", elapsed=148,
+                   approved=True)
+
+
+def _cells(*values):
+    """41 → 사람 없이 복구 41초 · 그 밖은 결과 이름(approved · failed · invalid · running · pending)."""
+    return [{"result": "auto", "sec": v} if isinstance(v, int) else {"result": v} for v in values]
+
+
+def _trials(f1_last):
+    return {
+        "total_runs": 25,
+        "rows": [
+            {"fault": "F-1", "cells": _cells(41, 38, 52, "approved", f1_last)},
+            {"fault": "F-2", "cells": _cells(24, 29, 22, 31, 27)},
+            {"fault": "F-3", "cells": _cells(66, "approved", 81, "failed", 74)},
+            {"fault": "F-5", "cells": _cells(35, 44, "invalid", 72, 39)},
+            {"fault": "F-6", "cells": _cells(48, 57, "failed", 52, "pending")},
+        ],
+        # F-4 는 무인 복구율 분모 밖이다(PRD 9.1) — 안전 전환 여부만
+        "f4": {"fault": "F-4", "cells": [{"result": "switched"}, {"result": "switched"},
+                                         {"result": "pending"}, {"result": "pending"}, {"result": "pending"}]},
+        # 어느 실행의 숫자인지 — D 제목줄 오른쪽에 그대로 나온다
+        "latest_run": {"run_id": "run_2ec6c62a", "ok": 23, "valid": 23,
+                       "avg_mttd_ms": 5843, "avg_mttr_ms": 14705},
+    }
+
+
+_METRICS = {
+    "metrics": [{"label": "MTTD", "value_text": "8s"}, {"label": "MTTR", "value_text": "41s"},
+                {"label": "성공률", "value_text": "82%"}, {"label": "에스컬레이션", "value_text": "2"}],
+    "detail": {"mttd_sec": 8.2, "mttr_sec": 41.3, "mttr_max_sec": 81, "integrity_issue_count": 0,
+               "escalation_count": 2, "incident_count": 22},
 }
 
-OPS_INCIDENTS = {
-    "incidents": [
-        {"incident_id": "INC-0007", "fault_code": "DEP_TIMEOUT", "state_text": "승인 대기",
-         "state": "awaiting_approval", "detected_at_text": "14:02:11", "resolved_at_text": "-"},
-        {"incident_id": "INC-0006", "fault_code": "WORKER_DOWN", "state_text": "복구 성공",
-         "state": "recovered", "detected_at_text": "13:40:03", "resolved_at_text": "13:41:12"},
-        {"incident_id": "INC-0005", "fault_code": "DB_CONN_LOST", "state_text": "복구 성공 · 캐시 폴백",
-         "state": "recovered", "detected_at_text": "13:12:40", "resolved_at_text": "13:13:05"},
-    ],
+_APPROVAL_7 = {
+    "incident_id": "INC-0007", "fault": "UNKNOWN", "summary": "원인 미확인 장애", "waiting_sec": 134,
+    "waiting_text": "2분째 대기",
+    "description_text": "해석기 1차 · 대체 모두 응답이 없어 자동 복구를 멈췄어요. 지금은 규칙 해석으로 주문을 받고 있어요",
+    "recommendation_text": "추천: 점검 후 1차 해석기 재개 · 근거 3건 (응답 없음 ×3) · 회로 시험까지 42초",
 }
 
-OPS_METRICS = {
-    "metrics": [
-        {"label": "MTTD", "value_text": "9.8s"},
-        {"label": "MTTR", "value_text": "41s"},
-        {"label": "성공률", "value_text": "85%"},
-        {"label": "에스컬레이션", "value_text": "1"},
-    ],
+
+def _detail(iid, fault, code, *, det, start, end=None, failed=None, wait=None, summary):
+    secs = {"detected": det, "recovery_started": start}
+    if end is not None:
+        secs["resolved"] = end
+    if failed is not None:
+        secs["failed"] = failed
+    return {"incident_id": iid, "fault": fault, "fault_code": code, "timeline_sec": secs,
+            "approval": {"waiting_sec": wait} if wait else None, "summary": summary}
+
+
+_DETAILS = {
+    "INC-0005": _detail("INC-0005", "F-6", "DB_UNAVAILABLE", det=6, start=7, failed=64, summary={
+        "diagnosis": "DB 연결 3회 연속 실패", "strategy": "재연결 후 캐시 조회",
+        "attempts": "재연결 3회 · 모두 실패", "verification": "캐시 조회 실패 · 수동 점검"}),
+    "INC-0006": _detail("INC-0006", "F-2", "WORKER_DOWN", det=8, start=9, end=27, summary={
+        "diagnosis": "워커 응답 없음 2회 연속", "strategy": "워커 재시작",
+        "attempts": "재시도 1 · 2초 → 2회째 성공", "verification": "헬스체크 3/3 · 유실 0"}),
+    "INC-0007": _detail("INC-0007", "F-3", "UNKNOWN", det=9, start=10, end=148, wait=134, summary={
+        "diagnosis": "해석기 1차 · 대체 모두 응답 없음", "strategy": "운영자 승인 후 1차 해석기 재개",
+        "attempts": "재시도 3 → 승인 후 성공", "verification": "헬스체크 3/3 · 유실 0"}),
+    "INC-0008": _detail("INC-0008", "F-1", "DEP_HTTP_5XX", det=8, start=9, end=41, summary={
+        "diagnosis": "1차 해석기 5xx 응답 3회 연속", "strategy": "대체 해석기로 전환",
+        "attempts": "재시도 2 · 1초 → 대체 전환 성공", "verification": "헬스체크 3/3 · 유실 0"}),
 }
+
+
+def ops_scene(name: str = "approval", *, injected_sec: int | None = None) -> dict:
+    """정본 시안 상태 하나의 응답 묶음 — status · incidents(+approvals) · metrics · trials · details.
+
+    `injected_sec` 는 미리보기에서 [F-1] 을 누른 뒤 지난 초다. 주어지면 배너 · 경과 시간에 그 값을 쓴다.
+    """
+    primary_blocked = _svc("order_interpreter_primary", "주문 해석 1차", "blocked",
+                           text="차단 · 42초 후 시험", probe=42)
+    details = dict(_DETAILS)
+    if name == "approval":
+        backup_dead = _svc("order_interpreter_backup", "주문 해석 대체", "blocked", text="차단 · 응답 없음")
+        status = _status([primary_blocked, backup_dead, _STORE_UP], active=None,
+                         alerts=[{"text": "최근 5분 주문 해석 실패율 12% (기준 10%)"}])
+        incidents = [_INC_7_WAIT, _INC_6, _INC_5]
+        approvals = [_APPROVAL_7]
+        details["INC-0007"] = {**_DETAILS["INC-0007"], "timeline_sec": {"detected": 9, "recovery_started": 10}}
+        trials = _trials("pending")
+    elif name == "injected":
+        sec = 3 if injected_sec is None else injected_sec
+        status = _status([_PRIMARY_UP, _BACKUP_STANDBY, _STORE_UP], active="order_interpreter_primary",
+                         injection={"code": "F-1", "run_no": 5, "elapsed_sec": sec})
+        incidents, approvals, trials = [_INC_7_DONE, _INC_6, _INC_5], [], _trials("running")
+    elif name == "recovering":
+        sec = 22 if injected_sec is None else injected_sec     # 주입 0초 기준 — 타임라인 · MTTR 과 같은 기준
+        probe = max(1, 42 - sec)
+        status = _status([_svc("order_interpreter_primary", "주문 해석 1차", "blocked",
+                               text=f"차단 · {probe}초 후 시험", probe=probe),
+                          _BACKUP_ACTIVE, _STORE_UP], active="order_interpreter_backup",
+                         injection={"code": "F-1", "run_no": 5, "elapsed_sec": sec})
+        inc8 = _inc("INC-0008", "F-1", "DEP_HTTP_5XX", "recovering", "복구 중", "방금", elapsed=sec)
+        incidents, approvals, trials = [inc8, _INC_7_DONE, _INC_6, _INC_5], [], _trials("running")
+        details["INC-0008"] = {**_DETAILS["INC-0008"], "timeline_sec": {"detected": 8, "recovery_started": 9}}
+    elif name == "recovered":
+        status = _status([_svc("order_interpreter_primary", "주문 해석 1차", "probing", text="복귀 확인", streak=2),
+                          _BACKUP_ACTIVE, _STORE_UP], active="order_interpreter_backup")
+        inc8 = _inc("INC-0008", "F-1", "DEP_HTTP_5XX", "recovered", "복구 성공", "방금", elapsed=41)
+        incidents, approvals, trials = [inc8, _INC_7_DONE, _INC_6, _INC_5], [], _trials(44)
+    else:  # normal
+        status = _status([_PRIMARY_UP, _BACKUP_STANDBY, _STORE_UP], active="order_interpreter_primary")
+        incidents, approvals, trials = [_INC_7_DONE, _INC_6, _INC_5], [], _trials("pending")
+    return {"name": name, "status": status, "incidents": {"incidents": incidents, "approvals": approvals},
+            "metrics": _METRICS, "trials": trials, "details": details}
+
+
+# 예전 이름 — 다른 코드 · 테스트가 쓰는 기본 상태(24 승인 필요)
+_DEFAULT_SCENE = ops_scene("approval")
+OPS_STATUS = _DEFAULT_SCENE["status"]
+OPS_INCIDENTS = {"incidents": _DEFAULT_SCENE["incidents"]["incidents"]}
+OPS_APPROVALS = {"approvals": _DEFAULT_SCENE["incidents"]["approvals"]}
+OPS_METRICS = _DEFAULT_SCENE["metrics"]
+OPS_TRIALS = _DEFAULT_SCENE["trials"]
 
 OPS_ORDERS = {
     "orders": [
@@ -492,6 +623,8 @@ OPS_ORDERS = {
          "confirmed_at_text": "14:20", "change_count_text": "4건", "recovery_count_text": "1건"},
         {"order_id": "ORD-0011", "brand_label": "일반 카페", "state_text": "확인 받는 중",
          "confirmed_at_text": "-", "change_count_text": "1건", "recovery_count_text": "0건"},
+        {"order_id": "ORD-0010", "brand_label": "스타벅스", "state_text": "주문 확정",
+         "confirmed_at_text": "12:40", "change_count_text": "2건", "recovery_count_text": "0건"},
     ],
 }
 
@@ -660,58 +793,5 @@ def rows_after(answered: int) -> list:
     return rows
 
 
-# --- O-2 사건 상세 (API-043) --------------------------------------------------
-# PRD 7.2 사건 로그 필수 항목을 빠짐없이 담는다. 시각은 역할마다 자기 것만 기록한다.
-OPS_INCIDENT_DETAIL = {
-    "INC-0007": {
-        "incident_id": "INC-0007", "trace_id": "tr_01JC8X7K2M",
-        "fault_code": "DEP_TIMEOUT", "status": "awaiting_approval",
-        "timeline": {"injected_at": "14:01:58", "detected_at": "14:02:11",
-                     "recovery_started_at": "14:02:12", "resolved_at": None, "failed_at": None},
-        "detection": {"metric": "api_latency", "evidence": "호출 5초 초과 x2", "threshold": "5s"},
-        "diagnosis": {"rule": "DEP_TIMEOUT", "reason": "연속 2회 호출 제한시간 초과",
-                      "source": "monitor_metrics"},
-        "recovery": {
-            "strategy": "retry_fallback",
-            "attempts": [{"no": 1, "action": "retry", "wait_ms": 1000, "result": "fail"},
-                         {"no": 2, "action": "retry", "wait_ms": 2000, "result": "fail"},
-                         {"no": 3, "action": "retry", "wait_ms": 4000, "result": "fail"},
-                         {"no": 4, "action": "switch_backup", "wait_ms": 0, "result": "fail"}],
-            "tool_calls": [{"tool": "switch_interpreter", "args": {"to": "backup"}, "result": "ok"}],
-            "circuit": {"state": "open", "retry_probe_in_sec": 42},
-        },
-        "verification": {"performed": False, "checks": [], "verdict": None},
-        "escalation": {"escalated": True, "escalated_at": "14:02:20",
-                       "approver": None, "decision": None},
-        "business_context": {"session_id": "ORD-0012", "snapshot_id": "snap_1",
-                             "brand_id": "starbucks", "menu_version": "mv_20261029",
-                             "checkpoint": "menu_matched", "completed_version": None},
-        "elapsed_sec": 187,
-    },
-    "INC-0006": {
-        "incident_id": "INC-0006", "trace_id": "tr_01JC8X7A1B",
-        "fault_code": "WORKER_DOWN", "status": "recovered",
-        "timeline": {"injected_at": "13:39:50", "detected_at": "13:40:03",
-                     "recovery_started_at": "13:40:05", "resolved_at": "13:41:12", "failed_at": None},
-        "detection": {"metric": "checkpoint_age_sec", "evidence": "체크포인트 73초 미갱신",
-                      "threshold": "60s"},
-        "diagnosis": {"rule": "WORKER_DOWN", "reason": "진행 중 세션의 체크포인트가 멈춤",
-                      "source": "health_checks"},
-        "recovery": {
-            "strategy": "restart_resume",
-            "attempts": [{"no": 1, "action": "restart_resume", "wait_ms": 0, "result": "ok"}],
-            "tool_calls": [{"tool": "resume_session", "args": {"session_id": "ORD-0011"},
-                            "result": "ok"}],
-            "circuit": {"state": "closed", "retry_probe_in_sec": None},
-        },
-        "verification": {"performed": True,
-                         "checks": [{"name": "health", "result": "pass"},
-                                    {"name": "분석 요청 재실행", "result": "pass"}],
-                         "verdict": "pass"},
-        "escalation": {"escalated": False, "escalated_at": None, "approver": None, "decision": None},
-        "business_context": {"session_id": "ORD-0011", "snapshot_id": "snap_4",
-                             "brand_id": "generic", "menu_version": "mv_20261029",
-                             "checkpoint": "intake_done", "completed_version": None},
-        "elapsed_sec": 69,
-    },
-}
+# --- O-2 사건 상세 (API-043) — 상태와 무관하게 같은 사건은 같은 상세다
+OPS_INCIDENT_DETAIL = _DETAILS
